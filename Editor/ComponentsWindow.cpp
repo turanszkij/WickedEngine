@@ -32,6 +32,7 @@ void ComponentsWindow::Create(EditorComponent* _editor)
 	filterCombo.AddItem(ICON_POINTLIGHT, (uint64_t)Filter::Light);
 	filterCombo.AddItem(ICON_ANIMATION, (uint64_t)Filter::Animation);
 	filterCombo.AddItem(ICON_FORCE, (uint64_t)Filter::Force);
+	filterCombo.AddItem(ICON_OCEANEXCLUSION, (uint64_t)Filter::OceanExclusion);
 	filterCombo.AddItem(ICON_EMITTER, (uint64_t)Filter::Emitter);
 	filterCombo.AddItem(ICON_HAIR, (uint64_t)Filter::Hairparticle);
 	filterCombo.AddItem(ICON_IK, (uint64_t)Filter::IK);
@@ -408,6 +409,7 @@ void ComponentsWindow::Create(EditorComponent* _editor)
 	emitterWnd.Create(editor);
 	hairWnd.Create(editor);
 	forceFieldWnd.Create(editor);
+	oceanExclusionWnd.Create(editor);
 	springWnd.Create(editor);
 	ikWnd.Create(editor);
 	transformWnd.Create(editor);
@@ -450,6 +452,7 @@ void ComponentsWindow::Create(EditorComponent* _editor)
 		ADD_DECAL,
 		ADD_WEATHER,
 		ADD_FORCE,
+		ADD_OCEANEXCLUSION,
 		ADD_ANIMATION,
 		ADD_SCRIPT,
 		ADD_RIGIDBODY,
@@ -489,6 +492,7 @@ void ComponentsWindow::Create(EditorComponent* _editor)
 	newComponentCombo.AddItem("Decal " ICON_DECAL, ADD_DECAL);
 	newComponentCombo.AddItem("Weather " ICON_WEATHER, ADD_WEATHER);
 	newComponentCombo.AddItem("Force Field " ICON_FORCE, ADD_FORCE);
+	newComponentCombo.AddItem("Ocean Exclusion " ICON_OCEANEXCLUSION, ADD_OCEANEXCLUSION);
 	newComponentCombo.AddItem("Animation " ICON_ANIMATION, ADD_ANIMATION);
 	newComponentCombo.AddItem("Script " ICON_SCRIPT, ADD_SCRIPT);
 	newComponentCombo.AddItem("Rigid Body Physics " ICON_RIGIDBODY, ADD_RIGIDBODY);
@@ -584,6 +588,12 @@ void ComponentsWindow::Create(EditorComponent* _editor)
 			case ADD_FORCE:
 				if (scene.forces.Contains(entity))
 					valid = false;
+				break;
+			case ADD_OCEANEXCLUSION:
+				if (scene.ocean_exclusions.Contains(entity))
+				{
+					valid = false;
+				}
 				break;
 			case ADD_ANIMATION:
 				if (scene.animations.Contains(entity))
@@ -715,6 +725,16 @@ void ComponentsWindow::Create(EditorComponent* _editor)
 			case ADD_FORCE:
 				scene.forces.Create(entity);
 				break;
+			case ADD_OCEANEXCLUSION:
+				if (!scene.transforms.Contains(entity))
+				{
+					scene.transforms.Create(entity);
+				}
+				scene.ocean_exclusions.Create(entity);
+				wi::renderer::SetToDrawDebugOceanExclusions(true);
+				editor->generalWnd.debugOceanExclusionsCheckBox.SetCheck(true);
+				oceanExclusionWnd.SetMinimized(false);
+				break;
 			case ADD_ANIMATION:
 				scene.animations.Create(entity);
 				break;
@@ -789,6 +809,7 @@ void ComponentsWindow::Create(EditorComponent* _editor)
 	AddWidget(&emitterWnd);
 	AddWidget(&hairWnd);
 	AddWidget(&forceFieldWnd);
+	AddWidget(&oceanExclusionWnd);
 	AddWidget(&springWnd);
 	AddWidget(&ikWnd);
 	AddWidget(&transformWnd);
@@ -825,6 +846,7 @@ void ComponentsWindow::Create(EditorComponent* _editor)
 	emitterWnd.SetVisible(false);
 	hairWnd.SetVisible(false);
 	forceFieldWnd.SetVisible(false);
+	oceanExclusionWnd.SetVisible(false);
 	springWnd.SetVisible(false);
 	ikWnd.SetVisible(false);
 	transformWnd.SetVisible(false);
@@ -1005,6 +1027,19 @@ void ComponentsWindow::ResizeLayout()
 	else
 	{
 		forceFieldWnd.SetVisible(false);
+	}
+
+	if (scene.ocean_exclusions.Contains(oceanExclusionWnd.entity))
+	{
+		oceanExclusionWnd.SetVisible(true);
+		oceanExclusionWnd.SetPos(pos);
+		oceanExclusionWnd.SetSize(XMFLOAT2(width, oceanExclusionWnd.GetScale().y));
+		pos.y += oceanExclusionWnd.GetSize().y;
+		pos.y += padding;
+	}
+	else
+	{
+		oceanExclusionWnd.SetVisible(false);
 	}
 
 	if (scene.hairs.Contains(hairWnd.entity))
@@ -1487,6 +1522,10 @@ void ComponentsWindow::PushToEntityTree(wi::ecs::Entity entity, int level)
 			{
 				item.name += ICON_FORCE " ";
 			}
+			if (scene.ocean_exclusions.Contains(entity))
+			{
+				item.name += ICON_OCEANEXCLUSION " ";
+			}
 			if (scene.sounds.Contains(entity))
 			{
 				item.name += ICON_SOUND " ";
@@ -1782,6 +1821,10 @@ int ComponentsWindow::GetEntityTypePriority(const wi::ecs::Entity entity, const 
 	if (scene.scripts.Contains(entity)) return 29;
 	if (scene.expressions.Contains(entity)) return 30;
 	if (scene.metadatas.Contains(entity)) return 31;
+	if (scene.ocean_exclusions.Contains(entity))
+	{
+		return 32;
+	}
 	return INT_MAX; // Entities with no specific component (sorted last)
 }
 
@@ -1861,6 +1904,7 @@ bool ComponentsWindow::CheckEntityFilter(const wi::ecs::Entity entity) const
 		(has_flag(filter, Filter::Constraint) && scene.constraints.Contains(entity)) ||
 		(has_flag(filter, Filter::Spline) && scene.splines.Contains(entity)) ||
 		(has_flag(filter, Filter::GaussianSplat) && scene.gaussian_splats.Contains(entity)) ||
+		(has_flag(filter, Filter::OceanExclusion) && scene.ocean_exclusions.Contains(entity)) ||
 		(has_flag(filter, Filter::Vehicle) && (scene.rigidbodies.Contains(entity) && scene.rigidbodies.GetComponent(entity)->IsVehicle()))
 		)
 	{

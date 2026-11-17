@@ -43,9 +43,11 @@ namespace wi
 
 		void UpdateDisplacementMap(wi::graphics::CommandList cmd) const;
 		void RenderForOcclusionTest(const wi::scene::CameraComponent& camera, wi::graphics::CommandList cmd) const;
-		void RenderForCubemap(wi::graphics::CommandList cmd) const;
+		// exclusion: the scene has ocean exclusion volumes that the ocean surface must be discarded in
+		void RenderForCubemap(wi::graphics::CommandList cmd, bool exclusion = false) const;
 		void RenderForShadowmap(wi::graphics::CommandList cmd, uint16_t camera_mask = 1) const;
-		void Render(const wi::scene::CameraComponent& camera, wi::graphics::CommandList cmd) const;
+		// exclusion: the scene has ocean exclusion volumes that the ocean surface must be discarded in
+		void Render(const wi::scene::CameraComponent& camera, wi::graphics::CommandList cmd, bool exclusion = false) const;
 
 		void CopyDisplacementMapReadback(wi::graphics::CommandList cmd) const;
 

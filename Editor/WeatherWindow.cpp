@@ -912,6 +912,15 @@ void WeatherWindow::Create(EditorComponent* _editor)
 		});
 	AddWidget(&ocean_resetButton);
 
+	ocean_addExclusionButton.Create(ICON_OCEANEXCLUSION " Add Ocean Exclusion");
+	ocean_addExclusionButton.SetTooltip("Create a dry volume at the global water level. Move or resize it to cover the area you want to drain.");
+	ocean_addExclusionButton.OnClick([this](wi::gui::EventArgs args) {
+		const Scene& scene = editor->GetCurrentScene();
+		const auto& weather = scene.weathers.GetCount() > 0 ? scene.weathers[0] : scene.weather;
+		editor->AddOceanExclusion(weather.oceanParameters.waterHeight);
+	});
+	AddWidget(&ocean_addExclusionButton);
+
 
 	preset0Button.Create("WeatherPreset - Default");
 	preset0Button.SetTooltip("Apply this weather preset to the world.");
@@ -1358,6 +1367,7 @@ void WeatherWindow::ResizeLayout()
 	layout.add(ocean_detailSlider);
 	layout.add(ocean_toleranceSlider);
 	layout.add_fullwidth(ocean_resetButton);
+	layout.add_fullwidth(ocean_addExclusionButton);
 
 	layout.jump();
 

@@ -114,6 +114,15 @@ void GeneralWindow::Create(EditorComponent* _editor)
 	debugForceFieldsCheckBox.SetCheck(wi::renderer::GetToDrawDebugForceFields());
 	AddWidget(&debugForceFieldsCheckBox);
 
+	debugOceanExclusionsCheckBox.Create(ICON_OCEANEXCLUSION " Ocean Exclusion visualizer: ");
+	debugOceanExclusionsCheckBox.SetTooltip("Visualize ocean exclusion volumes");
+	debugOceanExclusionsCheckBox.SetScriptTip("SetDebugOceanExclusionsEnabled(bool enabled)");
+	debugOceanExclusionsCheckBox.OnClick([](wi::gui::EventArgs args) {
+		wi::renderer::SetToDrawDebugOceanExclusions(args.bValue);
+		});
+	debugOceanExclusionsCheckBox.SetCheck(wi::renderer::GetToDrawDebugOceanExclusions());
+	AddWidget(&debugOceanExclusionsCheckBox);
+
 	debugRaytraceBVHCheckBox.Create("RT BVH visualizer: ");
 	debugRaytraceBVHCheckBox.SetTooltip("Visualize scene BVH if raytracing is enabled (only for software raytracing currently)");
 	debugRaytraceBVHCheckBox.OnClick([](wi::gui::EventArgs args) {
@@ -1596,6 +1605,7 @@ void GeneralWindow::ResizeLayout()
 	layout.add_right(boneLinesCheckBox);
 	layout.add_right(debugEmittersCheckBox);
 	layout.add_right(debugForceFieldsCheckBox);
+	layout.add_right(debugOceanExclusionsCheckBox);
 	layout.add_right(debugRaytraceBVHCheckBox);
 	layout.add_right(envProbesCheckBox);
 	layout.add_right(cameraVisCheckBox);

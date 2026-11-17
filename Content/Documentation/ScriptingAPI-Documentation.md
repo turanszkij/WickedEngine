@@ -64,6 +64,7 @@ for using this documentation as editor IntelliSense.
     - [RigidBodyPhysicsComponent](#rigidbodyphysicscomponent)
     - [SoftBodyPhysicsComponent](#softbodyphysicscomponent)
     - [ForceFieldComponent](#forcefieldcomponent)
+    - [OceanExclusionComponent](#oceanexclusioncomponent)
     - [WeatherComponent](#weathercomponent)
       - [OceanParameters](#oceanparameters)
       - [AtmosphereParameters](#atmosphereparameters)
@@ -756,6 +757,11 @@ functions below are in the global scope (there is no `Renderer` object).
     ---
     ---@param enabled boolean
     function SetDebugForceFieldsEnabled(enabled) end
+
+    --- Enables or disables drawing of the outlines of ocean exclusion volumes.
+    ---
+    ---@param enabled boolean
+    function SetDebugOceanExclusionsEnabled(enabled) end
 
     --- Enables or disables drawing of cameras.
     ---
@@ -3633,6 +3639,15 @@ handle to retrieve associated components.
     ---@return ForceFieldComponent
     function Scene.Component_CreateForceField(entity) end
 
+    --- Attach an OceanExclusionComponent to an entity. The returned component
+    --- is associated with the entity and can be manipulated. The volume is
+    --- placed by the TransformComponent of the entity.
+    ---
+    ---@param entity Entity
+    ---
+    ---@return OceanExclusionComponent
+    function Scene.Component_CreateOceanExclusion(entity) end
+
     --- Attach a WeatherComponent to an entity. The returned component is
     --- associated with the entity and can be manipulated.
     ---
@@ -3826,6 +3841,13 @@ handle to retrieve associated components.
     ---@return ForceFieldComponent?
     function Scene.Component_GetForceField(entity) end
 
+    --- Query the OceanExclusionComponent of the entity (if exists).
+    ---
+    ---@param entity Entity
+    ---
+    ---@return OceanExclusionComponent?
+    function Scene.Component_GetOceanExclusion(entity) end
+
     --- Query the WeatherComponent of the entity (if exists)..
     ---
     ---@param entity Entity
@@ -3976,6 +3998,11 @@ handle to retrieve associated components.
     ---@return ForceFieldComponent[]
     function Scene.Component_GetForceFieldArray() end
 
+    --- Returns an array of every OceanExclusion component in the scene.
+    ---
+    ---@return OceanExclusionComponent[]
+    function Scene.Component_GetOceanExclusionArray() end
+
     --- Returns an array of every Weather component in the scene.
     ---
     ---@return WeatherComponent[]
@@ -4117,6 +4144,11 @@ handle to retrieve associated components.
     ---@return Entity[]
     function Scene.Entity_GetForceFieldArray() end
 
+    --- Returns an array of every entity that has an OceanExclusion component.
+    ---
+    ---@return Entity[]
+    function Scene.Entity_GetOceanExclusionArray() end
+
     --- Returns an array of every entity that has a Weather component.
     ---
     ---@return Entity[]
@@ -4246,6 +4278,11 @@ handle to retrieve associated components.
     ---
     ---@param entity Entity
     function Scene.Component_RemoveForceField(entity) end
+
+    --- Remove the OceanExclusionComponent of the entity (if exists).
+    ---
+    ---@param entity Entity
+    function Scene.Component_RemoveOceanExclusion(entity) end
 
     --- Remove the WeatherComponent of the entity (if exists).
     ---
@@ -4384,6 +4421,39 @@ handle to retrieve associated components.
     ---
     ---@param worldPosition Vector
     function Scene.GetOceanPosAt(worldPosition) end
+
+    --- Returns true if the world position is inside an enabled ocean exclusion
+    --- volume (OceanExclusionComponent). There is no ocean at such a position,
+    --- even if it is below the ocean surface that GetOceanPosAt() returns. The
+    --- volumes are tested as they were at the last update of the scene.
+    ---
+    ---@param worldPosition Vector
+    ---
+    ---@return boolean
+    function Scene.IsOceanExcludedAt(worldPosition) end
+
+    --- Returns true if the weather has the ocean enabled, the world position
+    --- is below the ocean surface, and it is not inside an ocean exclusion
+    --- volume. The ocean surface is approximate, see GetOceanPosAt().
+    ---
+    ---@param worldPosition Vector
+    ---
+    ---@return boolean
+    function Scene.IsUnderOcean(worldPosition) end
+
+    --- Sets the Polygon shape for the OceanExclusionComponent of an entity,
+    --- with an outline that follows the SplineComponent of an other (or the
+    --- same) entity. The spline is handled as a closed loop that goes through
+    --- the world positions of its nodes. The outline is made once, it doesn't
+    --- follow later changes of the spline. Returns false for an invalid
+    --- exclusion, spline, transform or outline (3–4096 sampled points).
+    ---
+    ---@param exclusionEntity Entity
+    ---@param splineEntity Entity
+    ---@param subdivision? integer number of outline points per node, clamped to 1–32, default: 8
+    ---
+    ---@return boolean
+    function Scene.SetOceanExclusionPolygonFromSpline(exclusionEntity, splineEntity, subdivision) end
 
     --- Voxelizes a single object into the voxel grid. Subtract parameter
     --- controls whether the voxels are added (true) or removed (false). Lod
@@ -6176,6 +6246,16 @@ Describes an Inverse Kinematics effector.
         ConvexHull = 3,
         TriangleMesh = 4,
     }
+
+    --- Shape of an OceanExclusionComponent, in the local space of the volume.
+    ---
+    ---@enum OceanExclusionShape
+    OceanExclusionShape = {
+        Box = 0,      -- box from -1 to 1 on all axes
+        Sphere = 1,   -- sphere with a radius of 1
+        Cylinder = 2, -- cylinder along the Y axis with a radius of 1, from -1 to 1 on Y
+        Polygon = 3,  -- an outline on the XZ plane (see SetPolygon), from -1 to 1 on Y
+    }
 ```
 
 #### SoftBodyPhysicsComponent
@@ -6252,6 +6332,67 @@ Describes an Inverse Kinematics effector.
     ---@field Gravity number
     ---@field Range number
     local ForceFieldComponent = {}
+```
+
+#### OceanExclusionComponent
+
+```lua
+    --- Creates a new, standalone OceanExclusionComponent that owns its own
+    --- data.
+    ---
+    ---@return OceanExclusionComponent
+    function OceanExclusionComponent() end
+
+    --- A volume inside which the ocean doesn't exist: the ocean surface is not
+    --- rendered inside it. The dry space does not contribute ocean fog,
+    --- buoyancy, swimming or new ocean wetness. It keeps the ocean
+    --- out of places that are below the ocean level, for example a dry valley,
+    --- a cave, the inside of a ship or an underwater building. The volume is
+    --- placed, rotated and sized by the TransformComponent of the entity.
+    ---
+    ---@class OceanExclusionComponent
+    ---
+    ---@field Shape integer one of OceanExclusionShape
+    local OceanExclusionComponent = {}
+
+    --- Disables or enables the volume. A disabled volume doesn't keep the
+    --- ocean out.
+    ---
+    ---@param value? boolean default: true
+    function OceanExclusionComponent.SetDisabled(value) end
+
+    ---@return boolean
+    function OceanExclusionComponent.IsDisabled() end
+
+    --- Sets the Polygon shape with an outline on the local XZ plane of the
+    --- volume. The points are given as Vector(x, z). The last point is
+    --- connected to the first one. Supply 3–4096 finite points. The outline
+    --- can be concave; membership follows the even-odd rule.
+    ---
+    ---@param points Vector[]
+    function OceanExclusionComponent.SetPolygon(points) end
+
+    --- Returns the outline of the Polygon shape, as an array of Vector(x, z)
+    --- on the local XZ plane of the volume.
+    ---
+    ---@return Vector[]
+    function OceanExclusionComponent.GetPolygon() end
+
+    --- Sets the Polygon shape with an outline that is given by world space
+    --- points. They are projected onto the local XZ plane of the volume using
+    --- the current entity transform and its parents. Supply 3–4096 finite points.
+    ---
+    ---@param points Vector[]
+    function OceanExclusionComponent.SetPolygonFromWorldPoints(points) end
+
+    --- Returns true if the volume contains the world position, and the volume
+    --- is not disabled. The volume is tested as it was placed at the last
+    --- update of the scene.
+    ---
+    ---@param worldPosition Vector
+    ---
+    ---@return boolean
+    function OceanExclusionComponent.Contains(worldPosition) end
 ```
 
 #### WeatherComponent

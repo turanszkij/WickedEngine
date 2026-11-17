@@ -3344,4 +3344,152 @@ namespace wi::scene
 
 		bvh.Build(precomputed_aabbs.data(), (uint32_t)precomputed_aabbs.size());
 	}
+
+	static AABB GetOceanExclusionPolygonBounds(const wi::vector<XMFLOAT2>& polygon)
+	{
+		if (polygon.size() < 3 || polygon.size() > OceanExclusionComponent::max_polygon_points)
+		{
+			return {};
+		}
+		AABB bounds;
+		bounds._min.y = -1;
+		bounds._max.y = 1;
+		for (const XMFLOAT2& point : polygon)
+		{
+			if (!std::isfinite(point.x) || !std::isfinite(point.y))
+			{
+				return {};
+			}
+			bounds._min.x = std::min(bounds._min.x, point.x);
+			bounds._min.z = std::min(bounds._min.z, point.y);
+			bounds._max.x = std::max(bounds._max.x, point.x);
+			bounds._max.z = std::max(bounds._max.z, point.y);
+		}
+		if (bounds._min.x == bounds._max.x || bounds._min.z == bounds._max.z)
+		{
+			return {};
+		}
+		return bounds;
+	}
+
+	void OceanExclusionComponent::UpdateTransform(const XMFLOAT4X4& world)
+	{
+		this->world = world;
+		const XMMATRIX W = XMLoadFloat4x4(&world);
+		const XMMATRIX inverse = XMMatrixInverse(nullptr, W);
+		valid_transform = !XMMatrixIsNaN(inverse) && !XMMatrixIsInfinite(inverse);
+		inverse_world = wi::math::IDENTITY_MATRIX;
+		aabb = {};
+		if (!valid_transform)
+		{
+			return;
+		}
+		XMStoreFloat4x4(&inverse_world, inverse);
+		const AABB local = GetLocalAABB();
+		if (local._min.x <= local._max.x)
+		{
+			const AABB bounds = local.transform(W);
+			if (!XMVector3IsInfinite(XMLoadFloat3(&bounds._min)) && !XMVector3IsInfinite(XMLoadFloat3(&bounds._max)))
+			{
+				aabb = bounds;
+			}
+		}
+	}
+	wi::primitive::AABB OceanExclusionComponent::GetLocalAABB() const
+	{
+		switch (shape)
+		{
+		case Shape::Polygon:
+			return GetOceanExclusionPolygonBounds(polygon);
+		case Shape::Box:
+		case Shape::Sphere:
+		case Shape::Cylinder:
+			return AABB(XMFLOAT3(-1, -1, -1), XMFLOAT3(1, 1, 1));
+		}
+		return {};
+	}
+	bool OceanExclusionComponent::IsActive() const
+	{
+		return !IsDisabled() && valid_transform && aabb._min.x <= aabb._max.x &&
+			aabb._min.y <= aabb._max.y && aabb._min.z <= aabb._max.z &&
+			(shape == Shape::Polygon ? (polygon.size() >= 3 && polygon.size() <= max_polygon_points) :
+				(shape == Shape::Box || shape == Shape::Sphere || shape == Shape::Cylinder));
+	}
+	bool OceanExclusionComponent::ContainsLocal(const XMFLOAT3& localPosition) const
+	{
+		// Keep in sync with ocean_exclusion_check() in shaders/oceanHF.hlsli.
+		const XMFLOAT3& L = localPosition;
+		if (!(std::abs(L.y) <= 1))
+		{
+			return false; // every shape is bounded on the local Y axis
+		}
+		switch (shape)
+		{
+		case Shape::Box:
+			return std::abs(L.x) <= 1 && std::abs(L.z) <= 1;
+		case Shape::Sphere:
+			return L.x * L.x + L.y * L.y + L.z * L.z <= 1;
+		case Shape::Cylinder:
+			return L.x * L.x + L.z * L.z <= 1;
+		case Shape::Polygon:
+			{
+				if (polygon.size() < 3 || polygon.size() > max_polygon_points)
+				{
+					return false;
+				}
+				// Even-odd rule: count the outline edges that are crossed by a ray from the point towards +X
+				bool inside = false;
+				XMFLOAT2 a = polygon.back();
+				for (const XMFLOAT2& b : polygon)
+				{
+					if ((a.y > L.z) != (b.y > L.z) && L.x < (b.x - a.x) * (L.z - a.y) / (b.y - a.y) + a.x)
+					{
+						inside = !inside;
+					}
+					a = b;
+				}
+				return inside;
+			}
+		}
+		return false;
+	}
+	bool OceanExclusionComponent::Contains(const XMFLOAT3& worldPosition) const
+	{
+		if (!IsActive() || !aabb.intersects(worldPosition))
+		{
+			return false;
+		}
+		XMFLOAT3 localPosition;
+		XMStoreFloat3(&localPosition, XMVector3Transform(XMLoadFloat3(&worldPosition), XMLoadFloat4x4(&inverse_world)));
+		return ContainsLocal(localPosition);
+	}
+	bool OceanExclusionComponent::SetPolygon(wi::vector<XMFLOAT2> outline)
+	{
+		const AABB local = GetOceanExclusionPolygonBounds(outline);
+		if (local._min.x > local._max.x)
+		{
+			return false;
+		}
+		shape = Shape::Polygon;
+		polygon = std::move(outline);
+		UpdateTransform(world); // the bounds depend on the outline
+		return true;
+	}
+	bool OceanExclusionComponent::SetPolygonFromWorldPoints(const XMFLOAT3* points, size_t count)
+	{
+		if (!valid_transform || points == nullptr || count < 3 || count > max_polygon_points)
+		{
+			return false;
+		}
+		wi::vector<XMFLOAT2> outline;
+		outline.reserve(count);
+		const XMMATRIX inverseW = XMLoadFloat4x4(&inverse_world);
+		for (size_t i = 0; i < count; ++i)
+		{
+			XMFLOAT3 localPosition;
+			XMStoreFloat3(&localPosition, XMVector3Transform(XMLoadFloat3(&points[i]), inverseW));
+			outline.emplace_back(localPosition.x, localPosition.z);
+		}
+		return SetPolygon(std::move(outline));
+	}
 }

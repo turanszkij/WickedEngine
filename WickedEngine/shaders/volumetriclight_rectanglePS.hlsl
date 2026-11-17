@@ -17,18 +17,7 @@ float4 main(VertexToPixel input) : SV_TARGET
 	float cameraDistance = length(V);
 	V /= cameraDistance;
 
-	// Fix for ocean: because ocean is not in linear depth, we trace it instead
-	const ShaderOcean ocean = GetWeather().ocean;
-	if (ocean.IsValid())
-	{
-		float3 rayDirection = -V;
-		float dist = intersectPlaneClampInfiniteDist(GetCamera().position, rayDirection, float3(0, 1, 0), ocean.water_height);
-		if (dist > 0 && dist < cameraDistance)
-		{
-			P = GetCamera().position + rayDirection * dist;
-			cameraDistance = dist;
-		}
-	}
+	ocean_clip_volumetric_ray(GetCamera().position, -V, P, cameraDistance);
 
 	float marchedDistance = 0;
 	half3 accumulation = 0;

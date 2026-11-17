@@ -87,6 +87,9 @@
     <None Include="$(MSBuildThisFileDirectory)quad.hlsli">
       <Filter>HF</Filter>
     </None>
+    <None Include="$(MSBuildThisFileDirectory)oceanHF.hlsli">
+      <Filter>HF</Filter>
+    </None>
     <None Include="$(MSBuildThisFileDirectory)oceanSurfaceHF.hlsli">
       <Filter>HF</Filter>
     </None>
@@ -1074,6 +1077,12 @@
       <Filter>VS</Filter>
     </FxCompile>
     <FxCompile Include="$(MSBuildThisFileDirectory)oceanSurfacePS_envmap.hlsl">
+      <Filter>PS</Filter>
+    </FxCompile>
+    <FxCompile Include="$(MSBuildThisFileDirectory)oceanSurfacePS_envmap_exclusion.hlsl">
+      <Filter>PS</Filter>
+    </FxCompile>
+    <FxCompile Include="$(MSBuildThisFileDirectory)oceanSurfacePS_exclusion.hlsl">
       <Filter>PS</Filter>
     </FxCompile>
     <FxCompile Include="$(MSBuildThisFileDirectory)emittedparticlePS_shadow.hlsl">

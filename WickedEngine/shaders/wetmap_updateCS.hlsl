@@ -1,4 +1,4 @@
-#include "globals.hlsli"
+#include "oceanHF.hlsli"
 
 PUSHCONSTANT(push, WetmapPush);
 
@@ -33,24 +33,29 @@ void main(uint DTid : SV_DispatchThreadID)
 	bool drying_enabled = true;
 	
 	const ShaderOcean ocean = GetWeather().ocean;
-	float3 ocean_pos = float3(world_pos.x, ocean.water_height, world_pos.z);
+	bool ocean_shelters_from_rain = false;
 	[branch]
-	if (ocean.texture_displacementmap >= 0)
+	if (ocean.IsValid())
 	{
-		const float2 ocean_uv = ocean_pos.xz * ocean.patch_size_rcp;
-		Texture2D texture_displacementmap = bindless_textures[descriptor_index(ocean.texture_displacementmap)];
-		const float3 displacement = texture_displacementmap.SampleLevel(sampler_linear_wrap, ocean_uv, 0).xzy;
-		ocean_pos += displacement;
-		float water_depth = ocean_pos.y - world_pos.y;
+		const float height = ocean_height_at(ocean, world_pos.xz);
+		const float water_depth = height - world_pos.y;
 		if (water_depth > 0)
 		{
-			float shore = saturate(exp(-(ocean_pos.y - world_pos.y) / meshinstance.radius * 100)); // note: instance radius will soften the shoreline, looks better with large triangles like terrain
-			current = max(current, smoothstep(0, 1.4, 1 - shore));
-			drying_enabled=false;
+			if (!ocean_exclusion_check(world_pos))
+			{
+				// Instance radius softens the shoreline for large triangles such as terrain.
+				const float shore = saturate(exp(-water_depth / max(meshinstance.radius, 1e-4) * 100));
+				current = max(current, smoothstep(0, 1.4, 1 - shore));
+				drying_enabled = false;
+			}
+			else if (push.rain_amount > 0)
+			{
+				ocean_shelters_from_rain = ocean_blocks_rain(world_pos, height);
+			}
 		}
 	}
 
-	if(push.rain_amount > 0 && GetFrame().texture_shadowatlas_index >= 0 && any(GetFrame().rain_blocker_mad))
+	if(!ocean_shelters_from_rain && push.rain_amount > 0 && GetFrame().texture_shadowatlas_index >= 0 && any(GetFrame().rain_blocker_mad))
 	{
 		Texture2D texture_shadowatlas = bindless_textures[descriptor_index(GetFrame().texture_shadowatlas_index)];
 		float3 shadow_pos = mul(GetFrame().rain_blocker_matrix, float4(world_pos, 1)).xyz;

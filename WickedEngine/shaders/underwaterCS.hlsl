@@ -49,98 +49,145 @@ float GodRays(in float2 lightscreen, in float2 ndc, in float2 uv, in float iTime
 }
 
 
+// Approximate the displaced waterline, then integrate only the part of the view
+// segment that is in ocean. A dry viewer can see fogged water outside a pocket;
+// an underwater viewer looking into a pocket gets fog only up to the boundary.
+float ocean_fog_with_exclusions(ShaderOcean ocean, float3 O, float3 P, out float camera_depth)
+{
+	const float start_height = ocean_height_at(ocean, O.xz);
+	const float end_height = ocean_height_at(ocean, P.xz);
+	const float start_depth = start_height - O.y;
+	const float end_depth = end_height - P.y;
+	const bool start_wet_level = start_depth > 0;
+	const bool end_wet_level = end_depth > 0;
+	camera_depth = 0;
+	if (!start_wet_level && !end_wet_level)
+	{
+		return 0;
+	}
+
+	if (start_wet_level != end_wet_level)
+	{
+		const float3 waterline = lerp(O, P, start_depth / (start_depth - end_depth));
+		if (start_wet_level)
+		{
+			P = waterline;
+		}
+		else
+		{
+			// A normally visible surface already applies refraction and extinction.
+			// Only continue from above if there is no surface on this ray.
+			if (!ocean_exclusion_check(waterline))
+			{
+				return 0;
+			}
+			O = waterline;
+		}
+	}
+
+	const float fraction = ocean_unexcluded_fraction(O, P);
+	const float ray_length = length(P - O);
+	camera_depth = max(0, start_depth) * fraction;
+	return min(ray_length, max(ray_length * 0.1, end_depth)) * fraction;
+}
+
 [numthreads(POSTPROCESS_BLOCKSIZE, POSTPROCESS_BLOCKSIZE, 1)]
 void main(uint3 DTid : SV_DispatchThreadID)
 {
-	float2 uv = (DTid.xy + 0.5f) * postprocess.resolution_rcp;
-
-	// Unproject near plane and determine for every pixel if it's below water surface:
-	float4 clipspace = float4(uv_to_clipspace(uv), OCEAN_NEARPLANE_CUTOFF, 1); // push further away from near plane
-	float4 unproj = mul(GetCamera().inverse_view_projection, clipspace);
-	unproj.xyz /= unproj.w;
-	float3 world_pos = unproj.xyz;
-	const ShaderOcean ocean = GetWeather().ocean;
-	float3 ocean_pos = float3(world_pos.x, ocean.water_height, world_pos.z);
-	[branch]
-	if (ocean.texture_displacementmap >= 0)
+	if (any(DTid.xy >= postprocess.resolution))
 	{
-		const float2 ocean_uv = ocean_pos.xz * ocean.patch_size_rcp;
-		Texture2D texture_displacementmap = bindless_textures[descriptor_index(ocean.texture_displacementmap)];
-		const float3 displacement = texture_displacementmap.SampleLevel(sampler_linear_wrap, ocean_uv, 0).xzy;
-		ocean_pos += displacement;
+		return;
+	}
+	const float2 original_uv = (DTid.xy + 0.5f) * postprocess.resolution_rcp;
+	float2 uv = original_uv;
+	const ShaderOcean ocean = GetWeather().ocean;
+	if (!ocean.IsValid())
+	{
+		output[DTid.xy] = input.SampleLevel(sampler_linear_clamp, original_uv, 0);
+		return;
+	}
+
+	// The rasterized ocean uses this near cutoff for the waterline. Lens
+	// distortion belongs to the viewing medium, not to a distant wet surface.
+	const ShaderCamera camera = GetCamera();
+	const bool has_exclusions = ocean_has_exclusions(ocean);
+	float3 world_pos = reconstruct_position(uv, OCEAN_NEARPLANE_CUTOFF);
+	float water_height = ocean_height_at(ocean, world_pos.xz);
+	float waterline_blend = 1 - smoothstep(0.0, 0.025, saturate(world_pos.y - water_height - 0.01));
+	bool distort_view = true;
+	[branch]
+	if (has_exclusions)
+	{
+		const float3 eye = camera.IsOrtho() ? reconstruct_position(uv, 1.0) : camera.position;
+		distort_view = waterline_blend > 0 && !ocean_exclusion_check(eye) && !ocean_exclusion_check(world_pos);
 	}
 
 #ifdef INTERSECTION_DISTORT
-	// Distort at intersection:
-	float intersection_direction = world_pos.y - ocean_pos.y;
-	float intersection_distance = abs(intersection_direction);
-	float intersection_blend = saturate(exp(-intersection_distance * 50));
-	clipspace.xy *= lerp(1, 0.5, intersection_blend);
-	uv = clipspace_to_uv(clipspace.xy);
-	//color.rgb = lerp(color.rgb, ocean.water_color.rgb, intersection_blend);
-
-	// Recompute ray after distortion:
-	unproj = mul(GetCamera().inverse_view_projection, clipspace);
-	unproj.xyz /= unproj.w;
-	world_pos = unproj.xyz;
-	ocean_pos = float3(world_pos.x, ocean.water_height, world_pos.z);
-	[branch]
-	if (ocean.texture_displacementmap >= 0)
+	if (distort_view)
 	{
-		const float2 ocean_uv = ocean_pos.xz * ocean.patch_size_rcp;
-		Texture2D texture_displacementmap = bindless_textures[descriptor_index(ocean.texture_displacementmap)];
-		const float3 displacement = texture_displacementmap.SampleLevel(sampler_linear_wrap, ocean_uv, 0).xzy;
-		ocean_pos += displacement;
+		const float intersection_blend = saturate(exp(-abs(world_pos.y - water_height) * 50));
+		uv = clipspace_to_uv(uv_to_clipspace(uv) * lerp(1, 0.5, intersection_blend));
+		world_pos = reconstruct_position(uv, OCEAN_NEARPLANE_CUTOFF);
+		water_height = ocean_height_at(ocean, world_pos.xz);
+		waterline_blend = 1 - smoothstep(0.0, 0.025, saturate(world_pos.y - water_height - 0.01));
 	}
 #endif // INTERSECTION_DISTORT
 
-	float4 original_color = input.SampleLevel(sampler_linear_clamp, uv, 0);
-	float4 color = original_color;
-
-	// Apply effects on full screen:
+	const float4 original_color = input.SampleLevel(sampler_linear_clamp, has_exclusions ? original_uv : uv, 0);
+	if (!has_exclusions && waterline_blend <= 0)
 	{
+		output[DTid.xy] = original_color;
+		return;
+	}
 
+	float4 color;
+	{
+		if (distort_view)
+		{
 #ifdef LENS_DISTORT
-		// Some lens distortion uv modulation:
-		uv = clipspace_to_uv(brownConradyDistortion(uv_to_clipspace(uv) * 0.9));
+			uv = clipspace_to_uv(brownConradyDistortion(uv_to_clipspace(uv) * 0.9));
 #endif // LENS_DISTORT
-
 #ifdef ANIMATED_DISTORT
-		// It's not realistic to apply much refraction underwater to camera, but looks cool:
-		uv += sin(uv * 10 + GetFrame().time * 5) * 0.005;
-		uv += sin(-uv.y * 5 + GetFrame().time * 2) * 0.005;
+			uv += sin(uv * 10 + GetFrame().time * 5) * 0.005;
+			uv += sin(-uv.y * 5 + GetFrame().time * 2) * 0.005;
 #endif // ANIMATED_DISTORT
+		}
+		uv = saturate(uv);
+		const float depth = texture_depth.SampleLevel(sampler_linear_clamp, uv, 0);
+		const float3 surface_position = reconstruct_position(uv, depth);
+		const float4 clipspace2 = float4(uv_to_clipspace(uv), 1, 1);
+		const float3 near_pos = reconstruct_position(uv, 1.0);
+		const float3 origin = has_exclusions && !camera.IsOrtho() ? camera.position : near_pos;
+		const float3 ray = origin - surface_position;
+		const float surface_dist = length(ray);
+		const float3 V = ray / max(surface_dist, 1e-5);
 
+		float camera_depth;
+		float fog_distance;
+		[branch]
+		if (has_exclusions)
+		{
+			fog_distance = ocean_fog_with_exclusions(ocean, origin, surface_position, camera_depth);
+			if (fog_distance <= 0)
+			{
+				output[DTid.xy] = original_color;
+				return;
+			}
+		}
+		else
+		{
+			// Legacy waterline and fog approximation for scenes without cut-outs.
+			float3 ocean_surface_pos = intersectPlaneClampInfinite(near_pos, -V, float3(0, 1, 0), ocean.water_height);
+			Texture2D displacementmap = bindless_textures[descriptor_index(ocean.texture_displacementmap)];
+			ocean_surface_pos += displacementmap.SampleLevel(sampler_linear_wrap, ocean_surface_pos.xz * ocean.patch_size_rcp, 0).xzy;
+			const float ray_dist = min(surface_dist, length(ocean_surface_pos - near_pos)) * 0.1;
+			fog_distance = max(ray_dist, water_height - surface_position.y);
+			camera_depth = max(0, water_height - world_pos.y);
+		}
 		color = input.SampleLevel(sampler_linear_mirror, uv, 0);
 
-		const float depth = texture_depth.SampleLevel(sampler_linear_clamp, uv, 0);
-		float3 surface_position = reconstruct_position(uv, depth);
-
-		float4 clipspace2 = float4(uv_to_clipspace(uv), 1, 1); // exact near plane
-		float4 unproj2 = mul(GetCamera().inverse_view_projection, clipspace2);
-		unproj2.xyz /= unproj2.w;
-		float3 campos = unproj2.xyz;
-
-		float3 V = campos - surface_position.xyz;
-		float surface_dist = length(V);
-		V /= surface_dist;
-
-		// The ocean is not rendered into the lineardepth unfortunately, so we also trace it:
-		//	Otherwise the ocean surface could be same as infinite depth and incorrectly fogged
-		float3 ocean_surface_pos = intersectPlaneClampInfinite(campos, -V, float3(0, 1, 0), ocean.water_height);
-		float2 ocean_surface_uv = ocean_surface_pos.xz * ocean.patch_size_rcp;
-		Texture2D texture_displacementmap = bindless_textures[descriptor_index(ocean.texture_displacementmap)];
-		const float3 displacement = texture_displacementmap.SampleLevel(sampler_linear_wrap, ocean_surface_uv, 0).xzy;
-		ocean_surface_pos += displacement;
-		const float ocean_dist = length(ocean_surface_pos - campos);
-
-		const float ray_dist = min(surface_dist, ocean_dist) * 0.1;
-		const float water_depth = max(0, ocean_pos.y - surface_position.y);
-		const float camera_depth = max(0, ocean_pos.y - world_pos.y);
-		const float fog_distance = max(ray_dist, water_depth);
-
-		float fogAmount = 1 - saturate(exp(-fog_distance * ocean.water_color.a));
-		float3 transmittance = saturate(exp(-fog_distance * ocean.extinction_color.rgb * ocean.water_color.a));
+		const float fogAmount = 1 - saturate(exp(-fog_distance * ocean.water_color.a));
+		const float3 transmittance = saturate(exp(-fog_distance * ocean.extinction_color.rgb * ocean.water_color.a));
 		half3 fogColor = ocean.water_color.rgb;
 
 		// Sample inscattering color:
@@ -188,9 +235,6 @@ void main(uint3 DTid : SV_DispatchThreadID)
 		//color = float4(1, 0, 0, 1);
 	}
 
-	// Constrain the effect smoothly just below the water line:
-	color = lerp(color, original_color, smoothstep(0.0, 0.025, saturate(world_pos.y - ocean_pos.y - 0.01)));
-	//color = smoothstep(0.0, 0.05, saturate(intersection_direction));
-	
-	output[DTid.xy] = color;
+	// Preserve the legacy near-plane waterline blend when no cut-outs are active.
+	output[DTid.xy] = has_exclusions ? color : lerp(original_color, color, waterline_blend);
 }

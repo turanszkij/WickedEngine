@@ -284,6 +284,34 @@ namespace wi::scene
 			});
 		}
 
+		// Sync the ocean before the simulation jobs sample it. Weather's other
+		// systems, including the camera-dependent rain emitter, still run later.
+		if (weathers.GetCount() > 0)
+		{
+			weather.SetOceanEnabled(weathers[0].IsOceanEnabled());
+			weather.oceanParameters = weathers[0].oceanParameters;
+		}
+		if (weather.IsOceanEnabled())
+		{
+			if (!ocean.IsValid())
+			{
+				OceanRegenerate();
+			}
+			ocean.params = weather.oceanParameters;
+		}
+		else if (ocean.IsValid())
+		{
+			ocean = {};
+		}
+
+		// Characters run before the normal world-matrix update. Use the latest authored
+		// transforms (including parents), rather than the render snapshot from last frame.
+		if (dt > 0 && weather.IsOceanEnabled() && characters.GetCount() > 0 && ocean_exclusions.GetCount() > 0)
+		{
+			wi::jobsystem::context exclusion_ctx;
+			RunOceanExclusionUpdateSystem(exclusion_ctx, true);
+			wi::jobsystem::Wait(exclusion_ctx);
+		}
 		RunCharacterUpdateSystem(ctx);
 
 		RunAnimationUpdateSystem(ctx);
@@ -440,6 +468,8 @@ namespace wi::scene
 		RunProbeUpdateSystem(ctx);
 
 		RunForceUpdateSystem(ctx);
+
+		RunOceanExclusionUpdateSystem(ctx);
 
 		RunLightUpdateSystem(ctx);
 
@@ -907,6 +937,65 @@ namespace wi::scene
 		shaderscene.weather.ocean.patch_size_rcp = 1.0f / weather.oceanParameters.patch_length;
 		shaderscene.weather.ocean.texture_displacementmap = device->GetDescriptorIndex(ocean.getDisplacementMap(), SubresourceType::SRV);
 		shaderscene.weather.ocean.texture_gradientmap = device->GetDescriptorIndex(ocean.getGradientMap(), SubresourceType::SRV);
+
+		// Keep one immutable snapshot per buffered frame. On UMA we can bind the
+		// upload buffer directly; otherwise queue a copy with the other scene data.
+		oceanExclusionCount = ocean.IsValid() ? WriteOceanExclusionShaderData(oceanExclusionData) : 0;
+		if (!ocean.IsValid())
+		{
+			oceanExclusionData.clear();
+		}
+		shaderscene.weather.ocean.exclusion_buffer = -1;
+		shaderscene.weather.ocean.exclusion_count = 0;
+		if (oceanExclusionCount > 0)
+		{
+			const uint64_t data_size = oceanExclusionData.size();
+			GPUBuffer& upload_buffer = oceanExclusionUploadBuffer[cpu_gpu_mapped_resource_index];
+			GPUBuffer& gpu_buffer = oceanExclusionBuffer[cpu_gpu_mapped_resource_index];
+			bool ready = true;
+			if (!UMA && (!gpu_buffer.IsValid() || gpu_buffer.desc.size < data_size))
+			{
+				GPUBufferDesc desc;
+				desc.size = data_size * 2;
+				desc.bind_flags = BindFlag::SHADER_RESOURCE;
+				desc.misc_flags = ResourceMiscFlag::BUFFER_RAW;
+				ready = device->CreateBuffer(&desc, nullptr, &gpu_buffer);
+				if (ready)
+				{
+					device->SetName(&gpu_buffer, "Scene::oceanExclusionBuffer");
+				}
+			}
+			if (ready && (upload_buffer.mapped_data == nullptr || upload_buffer.desc.size < data_size))
+			{
+				GPUBufferDesc desc;
+				desc.size = data_size * 2;
+				desc.usage = Usage::UPLOAD;
+				if (UMA)
+				{
+					desc.bind_flags = BindFlag::SHADER_RESOURCE;
+					desc.misc_flags = ResourceMiscFlag::BUFFER_RAW;
+				}
+				ready = device->CreateBuffer(&desc, nullptr, &upload_buffer);
+				if (ready)
+				{
+					device->SetName(&upload_buffer, "Scene::oceanExclusionUploadBuffer");
+				}
+			}
+			if (ready && upload_buffer.mapped_data != nullptr)
+			{
+				const int descriptor = device->GetDescriptorIndex(UMA ? &upload_buffer : &gpu_buffer, SubresourceType::SRV);
+				if (descriptor >= 0)
+				{
+					std::memcpy(upload_buffer.mapped_data, oceanExclusionData.data(), data_size);
+					shaderscene.weather.ocean.exclusion_buffer = descriptor;
+					shaderscene.weather.ocean.exclusion_count = oceanExclusionCount;
+				}
+			}
+			if (shaderscene.weather.ocean.exclusion_buffer < 0)
+			{
+				oceanExclusionCount = 0;
+			}
+		}
 		shaderscene.weather.stars = weather.stars;
 		XMStoreFloat4(&shaderscene.weather.stars_rotation, XMQuaternionNormalize(XMQuaternionInverse(XMLoadFloat4(&weather.stars_rotation_quaternion))));
 		shaderscene.weather.rain_amount = weather.rain_amount;
@@ -1022,6 +1111,13 @@ namespace wi::scene
 				command.size = voxel_gpu_size;
 			}
 		}
+		if (oceanExclusionCount > 0 && !UMA)
+		{
+			GPUBufferCopyCommand& command = async_buffer_uploads.emplace_back();
+			command.dst = &oceanExclusionBuffer[cpu_gpu_mapped_resource_index];
+			command.src = &oceanExclusionUploadBuffer[cpu_gpu_mapped_resource_index];
+			command.size = oceanExclusionData.size();
+		}
 		if (!async_buffer_uploads.empty())
 		{
 			device->CopyBufferAsync(async_buffer_uploads.data(), async_buffer_uploads.size(), "Scene async buffer updates");
@@ -1041,6 +1137,11 @@ namespace wi::scene
 		surfelgi = {};
 		ddgi = {};
 		ocean = {};
+		weather.SetOceanEnabled(false);
+		oceanExclusionData.clear();
+		oceanExclusionCount = 0;
+		shaderscene.weather.ocean.exclusion_buffer = -1;
+		shaderscene.weather.ocean.exclusion_count = 0;
 
 		aabb_objects.clear();
 		aabb_lights.clear();
@@ -1426,6 +1527,30 @@ namespace wi::scene
 		transform.UpdateTransform();
 
 		ForceFieldComponent& force = forces.Create(entity);
+
+		return entity;
+	}
+	Entity Scene::Entity_CreateOceanExclusion(
+		const std::string& name,
+		const XMFLOAT3& position,
+		const XMFLOAT3& scale,
+		OceanExclusionComponent::Shape shape
+	)
+	{
+		Entity entity = CreateEntity();
+
+		names.Create(entity) = name;
+
+		layers.Create(entity);
+
+		TransformComponent& transform = transforms.Create(entity);
+		transform.Scale(scale);
+		transform.Translate(position);
+		transform.UpdateTransform();
+
+		OceanExclusionComponent& exclusion = ocean_exclusions.Create(entity);
+		exclusion.shape = shape;
+		exclusion.UpdateTransform(transform.world); // so that it can be queried before the next scene update
 
 		return entity;
 	}
@@ -5077,6 +5202,22 @@ namespace wi::scene
 
 		});
 	}
+	void Scene::RunOceanExclusionUpdateSystem(wi::jobsystem::context& ctx, bool from_local_transforms)
+	{
+		wi::jobsystem::Dispatch(ctx, (uint32_t)ocean_exclusions.GetCount(), small_subtask_groupsize, [this, from_local_transforms](wi::jobsystem::JobArgs args) {
+			OceanExclusionComponent& exclusion = ocean_exclusions[args.jobIndex];
+			const Entity entity = ocean_exclusions.GetEntity(args.jobIndex);
+			if (from_local_transforms)
+			{
+				XMFLOAT4X4 world;
+				XMStoreFloat4x4(&world, ComputeEntityMatrixRecursive(entity));
+				exclusion.UpdateTransform(world);
+				return;
+			}
+			const TransformComponent* transform = transforms.GetComponent(entity);
+			exclusion.UpdateTransform(transform != nullptr ? transform->world : wi::math::IDENTITY_MATRIX);
+		});
+	}
 	void Scene::RunLightUpdateSystem(wi::jobsystem::context& ctx)
 	{
 		aabb_lights.resize(lights.GetCount());
@@ -5440,40 +5581,22 @@ namespace wi::scene
 		if (weathers.GetCount() > 0)
 		{
 			weather = weathers[0];
-
-			if (weather.IsOceanEnabled() && !ocean.IsValid())
-			{
-				OceanRegenerate();
-			}
-			if (!weather.IsOceanEnabled())
-			{
-				ocean = {};
-			}
-
-			// Ocean occlusion status:
-			if (!wi::renderer::GetFreezeCullingCameraEnabled() && weather.IsOceanEnabled())
-			{
-				ocean.occlusionHistory <<= 1u; // advance history by 1 frame
-				int query_id = ocean.occlusionQueries[queryheap_idx];
-				if (queryResultBuffer[queryheap_idx].mapped_data != nullptr && query_id >= 0)
-				{
-					uint64_t visible = ((uint64_t*)queryResultBuffer[queryheap_idx].mapped_data)[query_id];
-					if (visible)
-					{
-						ocean.occlusionHistory |= 1; // visible
-					}
-				}
-				else
-				{
-					ocean.occlusionHistory |= 1; // visible
-				}
-			}
-			ocean.occlusionQueries[queryheap_idx] = -1; // invalidate query
 		}
 
 		if (ocean.IsValid())
 		{
-			ocean.params = weather.oceanParameters;
+			// Ocean occlusion status:
+			if (!wi::renderer::GetFreezeCullingCameraEnabled())
+			{
+				ocean.occlusionHistory <<= 1u;
+				const int query_id = ocean.occlusionQueries[queryheap_idx];
+				const uint64_t* results = (const uint64_t*)queryResultBuffer[queryheap_idx].mapped_data;
+				if (results == nullptr || query_id < 0 || query_id >= (int)queryHeap.desc.query_count || results[query_id] != 0)
+				{
+					ocean.occlusionHistory |= 1;
+				}
+			}
+			ocean.occlusionQueries[queryheap_idx] = -1;
 		}
 
 		if (weather.rain_amount > 0)
@@ -5901,15 +6024,12 @@ namespace wi::scene
 					{
 						XMFLOAT3 neck_pos = neck_transform->GetPosition();
 						neck_pos.y += character.water_vertical_offset;
-						XMFLOAT3 ocean_pos = GetOceanPosAt(neck_pos);
-						float water_distance = ocean_pos.y - neck_pos.y;
-						const bool jumping_out = water_distance < 0.0f && character.velocity.y > 1.0f;
-						const float water_slack = (was_swimming && !character.ground_intersect && !jumping_out) ? 0.45f : 0.0f;
-						if (ocean.IsValid() && water_distance > -water_slack)
+						const float water_slack = (was_swimming && !character.ground_intersect && character.velocity.y <= 1.0f) ? 0.45f : 0.0f;
+						XMFLOAT3 ocean_pos;
+						if (TryGetOceanSurfaceAt(neck_pos, ocean_pos, water_slack))
 						{
-							// Ocean is above the neck:
 							character.swimming = true;
-							swim_offset = water_distance;
+							swim_offset = ocean_pos.y - neck_pos.y;
 						}
 						else
 						{
@@ -6120,10 +6240,15 @@ namespace wi::scene
 				// Try to put water ripple under character:
 				if (horizontal_velocity_length > 0.01)
 				{
-					XMFLOAT3 ocean_pos = GetOceanPosAt(character.position);
-					if (character.position.y < ocean_pos.y)
+					XMFLOAT3 character_pos;
+					XMStoreFloat3(&character_pos, position);
+					XMFLOAT3 ocean_pos;
+					if (TryGetOceanSurfaceAt(character_pos, ocean_pos))
 					{
-						PutWaterRipple(XMFLOAT3(character.position.x, ocean_pos.y, character.position.z));
+						if (!IsOceanExcludedAt(ocean_pos))
+						{
+							PutWaterRipple(ocean_pos);
+						}
 					}
 					else
 					{
@@ -9064,6 +9189,175 @@ namespace wi::scene
 		}
 	}
 
+	bool Scene::IsOceanExcludedAt(const XMFLOAT3& worldPosition) const
+	{
+		for (size_t i = 0; i < ocean_exclusions.GetCount(); ++i)
+		{
+			if (ocean_exclusions[i].Contains(worldPosition))
+			{
+				return true;
+			}
+		}
+		return false;
+	}
+	bool Scene::IsUnderOcean(const XMFLOAT3& worldPosition) const
+	{
+		XMFLOAT3 surface;
+		return TryGetOceanSurfaceAt(worldPosition, surface);
+	}
+	bool Scene::TryGetOceanSurfaceAt(const XMFLOAT3& worldPosition, XMFLOAT3& surfacePosition, float surfaceSlack) const
+	{
+		if (!weather.IsOceanEnabled() || !ocean.IsValid() || IsOceanExcludedAt(worldPosition))
+		{
+			return false;
+		}
+		const XMFLOAT3 surface = GetOceanPosAt(worldPosition);
+		if (!(worldPosition.y - surface.y < surfaceSlack))
+		{
+			return false;
+		}
+		surfacePosition = surface;
+		return true;
+	}
+	bool Scene::SetOceanExclusionPolygonFromSpline(Entity exclusionEntity, Entity splineEntity, int subdivision)
+	{
+		OceanExclusionComponent* exclusion = ocean_exclusions.GetComponent(exclusionEntity);
+		const SplineComponent* spline = splines.GetComponent(splineEntity);
+		if (exclusion == nullptr || spline == nullptr)
+		{
+			return false;
+		}
+
+		// The world space positions of the spline nodes:
+		wi::vector<XMFLOAT3> nodes;
+		nodes.reserve(spline->spline_node_entities.size());
+		for (Entity node_entity : spline->spline_node_entities)
+		{
+			const TransformComponent* node_transform = transforms.GetComponent(node_entity);
+			if (node_transform != nullptr)
+			{
+				XMStoreFloat3(&nodes.emplace_back(), ComputeEntityMatrixRecursive(node_entity).r[3]);
+			}
+		}
+		if (nodes.size() < 3)
+		{
+			return false;
+		}
+
+		// A closed Catmull-Rom curve through the nodes, like the looped spline:
+		subdivision = std::clamp(subdivision, 1, 32);
+		const size_t node_count = nodes.size();
+		if (node_count > OceanExclusionComponent::max_polygon_points / size_t(subdivision))
+		{
+			return false;
+		}
+		wi::vector<XMFLOAT3> points;
+		points.reserve(node_count * size_t(subdivision));
+		for (size_t i = 0; i < node_count; ++i)
+		{
+			const XMVECTOR P0 = XMLoadFloat3(&nodes[(i + node_count - 1) % node_count]);
+			const XMVECTOR P1 = XMLoadFloat3(&nodes[i]);
+			const XMVECTOR P2 = XMLoadFloat3(&nodes[(i + 1) % node_count]);
+			const XMVECTOR P3 = XMLoadFloat3(&nodes[(i + 2) % node_count]);
+			for (int j = 0; j < subdivision; ++j)
+			{
+				XMStoreFloat3(&points.emplace_back(), XMVectorCatmullRom(P0, P1, P2, P3, float(j) / float(subdivision)));
+			}
+		}
+
+		// Use current authored transforms, including pending parent edits.
+		XMFLOAT4X4 world;
+		XMStoreFloat4x4(&world, ComputeEntityMatrixRecursive(exclusionEntity));
+		OceanExclusionComponent candidate;
+		candidate._flags = exclusion->_flags;
+		candidate.UpdateTransform(world);
+		if (!candidate.SetPolygonFromWorldPoints(points.data(), points.size()))
+		{
+			return false;
+		}
+		*exclusion = std::move(candidate);
+		return true;
+	}
+	uint32_t Scene::WriteOceanExclusionShaderData(wi::vector<uint8_t>& data) const
+	{
+		static_assert(sizeof(ShaderOceanExclusion) == 96 && offsetof(ShaderOceanExclusion, polygon_count) == 80);
+		static_assert(sizeof(XMFLOAT2) == 8);
+		// The enabled volumes come first as a ShaderOceanExclusion array, then the outline points of the polygons:
+		uint32_t count = 0;
+		size_t polygon_point_count = 0;
+		for (size_t i = 0; i < ocean_exclusions.GetCount(); ++i)
+		{
+			const OceanExclusionComponent& exclusion = ocean_exclusions[i];
+			if (!exclusion.IsActive())
+			{
+				continue;
+			}
+			if (exclusion.shape == OceanExclusionComponent::Shape::Polygon)
+			{
+				polygon_point_count += exclusion.polygon.size();
+			}
+			count++;
+		}
+		const size_t byte_size = count * sizeof(ShaderOceanExclusion) + polygon_point_count * sizeof(XMFLOAT2);
+		if (byte_size > std::numeric_limits<uint32_t>::max()) // ByteAddressBuffer addresses are 32 bit
+		{
+			data.clear();
+			return 0;
+		}
+		data.resize(byte_size);
+		if (count == 0)
+		{
+			return 0;
+		}
+
+		uint32_t write_index = 0;
+		size_t polygon_offset = count * sizeof(ShaderOceanExclusion);
+		for (size_t i = 0; i < ocean_exclusions.GetCount(); ++i)
+		{
+			const OceanExclusionComponent& exclusion = ocean_exclusions[i];
+			if (!exclusion.IsActive())
+			{
+				continue;
+			}
+			const bool is_polygon = exclusion.shape == OceanExclusionComponent::Shape::Polygon;
+
+			ShaderOceanExclusion shader_exclusion = {};
+			// The shaders transform a position as a column vector, so they get the columns of the matrix:
+			const XMFLOAT4X4& M = exclusion.inverse_world;
+			shader_exclusion.transform_x = XMFLOAT4(M._11, M._21, M._31, M._41);
+			shader_exclusion.transform_y = XMFLOAT4(M._12, M._22, M._32, M._42);
+			shader_exclusion.transform_z = XMFLOAT4(M._13, M._23, M._33, M._43);
+			shader_exclusion.aabb_min = exclusion.aabb.getMin();
+			shader_exclusion.aabb_max = exclusion.aabb.getMax();
+			switch (exclusion.shape)
+			{
+			default:
+			case OceanExclusionComponent::Shape::Box:
+				shader_exclusion.shape = OCEAN_EXCLUSION_SHAPE_BOX;
+				break;
+			case OceanExclusionComponent::Shape::Sphere:
+				shader_exclusion.shape = OCEAN_EXCLUSION_SHAPE_SPHERE;
+				break;
+			case OceanExclusionComponent::Shape::Cylinder:
+				shader_exclusion.shape = OCEAN_EXCLUSION_SHAPE_CYLINDER;
+				break;
+			case OceanExclusionComponent::Shape::Polygon:
+				shader_exclusion.shape = OCEAN_EXCLUSION_SHAPE_POLYGON;
+				break;
+			}
+			if (is_polygon)
+			{
+				shader_exclusion.polygon_offset = (uint32_t)polygon_offset;
+				shader_exclusion.polygon_count = (uint32_t)exclusion.polygon.size();
+				const size_t polygon_size = exclusion.polygon.size() * sizeof(XMFLOAT2);
+				std::memcpy(data.data() + polygon_offset, exclusion.polygon.data(), polygon_size);
+				polygon_offset += polygon_size;
+			}
+			std::memcpy(data.data() + write_index * sizeof(ShaderOceanExclusion), &shader_exclusion, sizeof(shader_exclusion));
+			write_index++;
+		}
+		return count;
+	}
 	XMFLOAT3 Scene::GetOceanPosAt(const XMFLOAT3& worldPosition) const
 	{
 		if (!ocean.IsValid())
@@ -9330,10 +9624,10 @@ namespace wi::scene
 			while (parentID != INVALID_ENTITY)
 			{
 				TransformComponent* transform_parent = transforms.GetComponent(parentID);
-				if (transform_parent == nullptr)
-					break;
-
-				parentMatrix *= transform_parent->GetLocalMatrix();
+				if (transform_parent != nullptr)
+				{
+					parentMatrix *= transform_parent->GetLocalMatrix();
+				}
 
 				const HierarchyComponent* hier_recursive = hierarchy.GetComponent(parentID);
 				if (hier_recursive != nullptr)

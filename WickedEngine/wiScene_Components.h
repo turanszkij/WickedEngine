@@ -1674,6 +1674,71 @@ namespace wi::scene
 		void Serialize(wi::Archive& archive, wi::ecs::EntitySerializer& seri);
 	};
 
+	// A volume inside which the ocean doesn't exist:
+	//	- the ocean surface is not rendered inside it
+	//	- the space inside it is not underwater: no underwater rendering, buoyancy, swimming, wetness, etc.
+	//	It can be used to keep the ocean out of places that are below the ocean level, for example
+	//	a dry valley, a cave, the inside of a ship or an underwater building.
+	//	The volume is placed, rotated and sized by the TransformComponent of the entity.
+	struct OceanExclusionComponent
+	{
+		enum FLAGS
+		{
+			EMPTY = 0,
+			DISABLED = 1 << 0,
+		};
+		uint32_t _flags = EMPTY;
+
+		// The shapes are defined in the local space of the volume:
+		enum class Shape
+		{
+			Box,		// box in [-1, 1] range on all axes
+			Sphere,		// sphere with radius 1 (an ellipsoid if the transform has non uniform scaling)
+			Cylinder,	// cylinder along the Y axis with radius 1 and Y in [-1, 1] range
+			Polygon,	// prism: an outline on the XZ plane (see: polygon) and Y in [-1, 1] range
+		} shape = Shape::Box;
+
+		// The outline of the Polygon shape on the local XZ plane (XMFLOAT2::x = local X, XMFLOAT2::y = local Z)
+		//	The last point is connected to the first one. The interior is defined by the even-odd rule.
+		static constexpr size_t max_polygon_points = 4096;
+		wi::vector<XMFLOAT2> polygon;
+
+		// Non-serialized attributes:
+		//	These are computed from the TransformComponent in Scene::Update(), or by UpdateTransform()
+		XMFLOAT4X4 world = wi::math::IDENTITY_MATRIX; // local space to world space
+		XMFLOAT4X4 inverse_world = wi::math::IDENTITY_MATRIX; // world space to local space
+		wi::primitive::AABB aabb = { XMFLOAT3(-1, -1, -1), XMFLOAT3(1, 1, 1) }; // world space bounds
+		bool valid_transform = true;
+
+		constexpr void SetDisabled(bool value = true) { set_flag(_flags, DISABLED, value); }
+		constexpr bool IsDisabled() const { return _flags & DISABLED; }
+
+		// Recomputes the non-serialized attributes from a local space to world space matrix
+		void UpdateTransform(const XMFLOAT4X4& world);
+
+		// Disabled volumes, invalid transforms and empty/invalid outlines have no effect.
+		bool IsActive() const;
+		bool SetPolygon(wi::vector<XMFLOAT2> outline);
+
+		// Returns the bounds of the shape in the local space of the volume
+		wi::primitive::AABB GetLocalAABB() const;
+
+		// Returns true if the shape contains the position that is given in the local space of the volume
+		bool ContainsLocal(const XMFLOAT3& localPosition) const;
+
+		// Returns true if the volume contains the world space position, and the volume is not disabled
+		//	This uses the non-serialized transform attributes
+		bool Contains(const XMFLOAT3& worldPosition) const;
+
+		// Sets the Polygon shape with an outline that is given by world space points
+		//	The points are projected onto the local XZ plane of the volume by the non-serialized transform attributes,
+		//	so the transform must be already updated when calling this (in Scene::Update(), or by UpdateTransform())
+		//	Returns false without changing the outline if the points or the transform are invalid.
+		bool SetPolygonFromWorldPoints(const XMFLOAT3* points, size_t count);
+
+		void Serialize(wi::Archive& archive, wi::ecs::EntitySerializer& seri);
+	};
+
 	struct alignas(32) DecalComponent
 	{
 		enum FLAGS

@@ -2142,6 +2142,41 @@ namespace wi::physics
 	float GetCharacterCollisionTolerance() { return CHARACTER_COLLISION_TOLERANCE; }
 	void SetCharacterCollisionTolerance(float value) { CHARACTER_COLLISION_TOLERANCE = value; }
 
+	// Ocean and mesh water are distinct media. A dry pocket only removes the former.
+	static bool ApplyWaterEffects(Scene& scene, BodyInterface& bodies, BodyID body, Vec3Arg gravity, float buoyancy, bool was_underwater)
+	{
+		const Vec3 center = bodies.GetCenterOfMassPosition(body);
+		const XMFLOAT3 position = cast(center);
+		XMFLOAT3 surface;
+		Vec3 normal;
+		const bool in_ocean = scene.TryGetOceanSurfaceAt(position, surface);
+		if (in_ocean)
+		{
+			const Vec3 p = cast(surface);
+			const Vec3 p2 = cast(scene.GetOceanPosAt(cast(center + Vec3(0, 0, 0.1f))));
+			const Vec3 p3 = cast(scene.GetOceanPosAt(cast(center + Vec3(0.1f, 0, 0))));
+			normal = (p2 - p).Cross(p3 - p).NormalizedOr(Vec3::sAxisY());
+		}
+		else
+		{
+			const wi::primitive::Ray ray(XMFLOAT3(position.x, position.y + 10.0f, position.z), XMFLOAT3(0, -1, 0), 0, 100);
+			const Scene::RayIntersectionResult hit = scene.Intersects(ray, wi::enums::FILTER_WATER);
+			if (hit.entity == INVALID_ENTITY || hit.position.y <= position.y)
+			{
+				return false;
+			}
+			surface = hit.position;
+			normal = cast(hit.normal);
+		}
+
+		bodies.ApplyBuoyancyImpulse(body, cast(surface), normal, buoyancy, 0.8f, 0.6f, Vec3::sZero(), gravity, scene.dt);
+		if (!was_underwater && (!in_ocean || !scene.IsOceanExcludedAt(surface)))
+		{
+			scene.PutWaterRipple(surface);
+		}
+		return true;
+	}
+
 	void RunPhysicsUpdateSystem(
 		wi::jobsystem::context& ctx,
 		wi::scene::Scene& scene,
@@ -2155,6 +2190,11 @@ namespace wi::physics
 
 		// TODO: without this there are bugs in terrain physics generation
 		scene.RunHierarchyUpdateSystem(ctx);
+		if (scene.weather.IsOceanEnabled())
+		{
+			// Refresh after animation, before physics jobs read the snapshot in parallel.
+			scene.RunOceanExclusionUpdateSystem(ctx, true);
+		}
 		wi::jobsystem::Wait(ctx);
 
 		auto range = wi::profiler::BeginRangeCPU("Physics");
@@ -2472,78 +2512,7 @@ namespace wi::physics
 
 			if (currentMotionType == EMotionType::Dynamic && is_active)
 			{
-				const Vec3 com = body_interface.GetCenterOfMassPosition(physicsobject.bodyID);
-				bool is_underwater = false;
-
-				// Apply effects on dynamics if needed:
-				if (scene.weather.IsOceanEnabled())
-				{
-					const Vec3 surface_position = cast(scene.GetOceanPosAt(cast(com)));
-					const float diff = com.GetY() - surface_position.GetY();
-					if (diff < 0)
-					{
-						const Vec3 p2 = cast(scene.GetOceanPosAt(cast(com + Vec3(0, 0, 0.1f))));
-						const Vec3 p3 = cast(scene.GetOceanPosAt(cast(com + Vec3(0.1f, 0, 0))));
-						const Vec3 surface_normal = Vec3(p2 - surface_position).Cross(Vec3(p3 - surface_position)).Normalized();
-
-						body_interface.ApplyBuoyancyImpulse(
-							physicsobject.bodyID,
-							surface_position,
-							surface_normal,
-							physicscomponent.buoyancy,
-							0.8f,
-							0.6f,
-							Vec3::sZero(),
-							physics_scene.physics_system.GetGravity(),
-							scene.dt
-						);
-
-						if (!physicsobject.was_underwater)
-						{
-							physicsobject.was_underwater = true;
-							is_underwater = true;
-							scene.PutWaterRipple(cast(surface_position));
-						}
-					}
-					else
-					{
-						is_underwater = false;
-					}
-				}
-
-				if (!is_underwater)
-				{
-					// Check for water volumes (non-ocean water bodies)
-					XMFLOAT3 pos = cast(com);
-					wi::primitive::Ray ray_down(XMFLOAT3(pos.x, pos.y + 10.0f, pos.z), XMFLOAT3(0, -1, 0), 0, 100);
-					wi::scene::Scene::RayIntersectionResult result = scene.Intersects(ray_down, wi::enums::FILTER_WATER);
-					if (result.entity != INVALID_ENTITY && result.position.y > pos.y)
-					{
-						body_interface.ApplyBuoyancyImpulse(
-							physicsobject.bodyID,
-							cast(result.position),
-							cast(result.normal),
-							physicscomponent.buoyancy,
-							0.8f,
-							0.6f,
-							Vec3::sZero(),
-							physics_scene.physics_system.GetGravity(),
-							scene.dt
-						);
-
-						if (!physicsobject.was_underwater)
-						{
-							physicsobject.was_underwater = true;
-							is_underwater = true;
-							scene.PutWaterRipple(result.position);
-						}
-					}
-				}
-
-				if (!is_underwater)
-				{
-					physicsobject.was_underwater = false;
-				}
+				physicsobject.was_underwater = ApplyWaterEffects(scene, body_interface, physicsobject.bodyID, physics_scene.physics_system.GetGravity(), physicscomponent.buoyancy, physicsobject.was_underwater);
 			}
 
 			if (physicsobject.teleporting)
@@ -2692,76 +2661,7 @@ namespace wi::physics
 					for (auto& bodypart : floating_bodyparts)
 					{
 						auto& rb = ragdoll.rigidbodies[bodypart];
-						const Vec3 com = body_interface.GetCenterOfMassPosition(rb.bodyID);
-						bool is_underwater = false;
-
-						if (scene.weather.IsOceanEnabled())
-						{
-							const Vec3 surface_position = cast(scene.GetOceanPosAt(cast(com)));
-							const float diff = com.GetY() - surface_position.GetY();
-							if (diff < 0)
-							{
-								const Vec3 p2 = cast(scene.GetOceanPosAt(cast(com + Vec3(0, 0, 0.1f))));
-								const Vec3 p3 = cast(scene.GetOceanPosAt(cast(com + Vec3(0.1f, 0, 0))));
-								const Vec3 surface_normal = Vec3(p2 - surface_position).Cross(Vec3(p3 - surface_position)).Normalized();
-
-								body_interface.ApplyBuoyancyImpulse(
-									rb.bodyID,
-									surface_position,
-									surface_normal,
-									6.0f,
-									0.8f,
-									0.6f,
-									Vec3::sZero(),
-									physics_scene.physics_system.GetGravity(),
-									scene.dt
-								);
-
-								if (!rb.was_underwater)
-								{
-									rb.was_underwater = true;
-									scene.PutWaterRipple(cast(surface_position));
-								}
-							}
-							else
-							{
-								is_underwater = false;
-							}
-						}
-
-						if (!is_underwater)
-						{
-							// Check for water volumes (non-ocean water bodies)
-							XMFLOAT3 pos = cast(com);
-							wi::primitive::Ray ray_down(XMFLOAT3(pos.x, pos.y + 10.0f, pos.z), XMFLOAT3(0, -1, 0), 0, 100);
-							wi::scene::Scene::RayIntersectionResult result = scene.Intersects(ray_down, wi::enums::FILTER_WATER);
-							if (result.entity != INVALID_ENTITY && result.position.y > pos.y)
-							{
-								body_interface.ApplyBuoyancyImpulse(
-									rb.bodyID,
-									cast(result.position),
-									cast(result.normal),
-									6.0f,
-									0.8f,
-									0.6f,
-									Vec3::sZero(),
-									physics_scene.physics_system.GetGravity(),
-									scene.dt
-								);
-
-								if (!rb.was_underwater)
-								{
-									rb.was_underwater = true;
-									is_underwater = true;
-									scene.PutWaterRipple(result.position);
-								}
-							}
-						}
-
-						if (!is_underwater)
-						{
-							rb.was_underwater = false;
-						}
+						rb.was_underwater = ApplyWaterEffects(scene, body_interface, rb.bodyID, physics_scene.physics_system.GetGravity(), 6.0f, rb.was_underwater);
 					}
 				}
 				else

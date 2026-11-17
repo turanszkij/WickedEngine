@@ -66,6 +66,7 @@ namespace wi::scene
 		wi::ecs::ComponentManager<PhysicsConstraintComponent>& constraints = componentLibrary.Register<PhysicsConstraintComponent>("wi::scene::Scene::constraints", 6); // version = 6
 		wi::ecs::ComponentManager<SplineComponent>& splines = componentLibrary.Register<SplineComponent>("wi::scene::Scene::splines", 4); // version = 4
 		wi::ecs::ComponentManager<wi::GaussianSplatModel>& gaussian_splats = componentLibrary.Register<wi::GaussianSplatModel>("wi::scene::Scene::gaussian_splats");
+		wi::ecs::ComponentManager<OceanExclusionComponent>& ocean_exclusions = componentLibrary.Register<OceanExclusionComponent>("wi::scene::Scene::ocean_exclusions");
 
 		// Non-serialized attributes:
 		float dt = 0;
@@ -282,6 +283,14 @@ namespace wi::scene
 		wi::Ocean ocean;
 		void OceanRegenerate() { ocean.Create(weather.oceanParameters); }
 
+		// Ocean exclusion volumes GPU state:
+		//	The buffers contain the ShaderOceanExclusion array of the enabled OceanExclusionComponents,
+		//	followed by the outline points of the polygon shapes, see: WriteOceanExclusionShaderData()
+		wi::graphics::GPUBuffer oceanExclusionUploadBuffer[wi::graphics::GraphicsDevice::GetBufferCount()];
+		wi::graphics::GPUBuffer oceanExclusionBuffer[wi::graphics::GraphicsDevice::GetBufferCount()];
+		wi::vector<uint8_t> oceanExclusionData; // the buffer content for the current frame
+		uint32_t oceanExclusionCount = 0; // the number of ocean exclusion volumes in the buffer for the current frame
+
 		// Simple water ripple sprites:
 		mutable wi::vector<wi::Sprite> waterRipples;
 		void PutWaterRipple(const XMFLOAT3& pos);
@@ -392,6 +401,12 @@ namespace wi::scene
 			const std::string& name,
 			const XMFLOAT3& position = XMFLOAT3(0, 0, 0)
 		);
+		wi::ecs::Entity Entity_CreateOceanExclusion(
+			const std::string& name,
+			const XMFLOAT3& position = XMFLOAT3(0, 0, 0),
+			const XMFLOAT3& scale = XMFLOAT3(1, 1, 1),
+			OceanExclusionComponent::Shape shape = OceanExclusionComponent::Shape::Box
+		);
 		wi::ecs::Entity Entity_CreateEnvironmentProbe(
 			const std::string& name,
 			const XMFLOAT3& position = XMFLOAT3(0, 0, 0)
@@ -501,6 +516,7 @@ namespace wi::scene
 		void RunDecalUpdateSystem(wi::jobsystem::context& ctx);
 		void RunProbeUpdateSystem(wi::jobsystem::context& ctx);
 		void RunForceUpdateSystem(wi::jobsystem::context& ctx);
+		void RunOceanExclusionUpdateSystem(wi::jobsystem::context& ctx, bool from_local_transforms = false);
 		void RunLightUpdateSystem(wi::jobsystem::context& ctx);
 		void RunParticleUpdateSystem(wi::jobsystem::context& ctx);
 		void RunWeatherUpdateSystem(wi::jobsystem::context& ctx);
@@ -618,6 +634,30 @@ namespace wi::scene
 		//	The result position is approximate because it involves reading back from GPU to the CPU, so the result can be delayed compared to the current GPU simulation.
 		//	Note that the input position to this function will be taken on the XZ plane and modified by the displacement map's XZ value, and the Y (vertical) position will be taken from the ocean water height and displacement map only.
 		XMFLOAT3 GetOceanPosAt(const XMFLOAT3& worldPosition) const;
+
+		// Returns true if the world space position is inside an enabled ocean exclusion volume (OceanExclusionComponent).
+		//	There is no ocean at such a position, even if it is below the ocean surface that GetOceanPosAt() returns.
+		//	The volumes are tested as they were at the last Scene::Update().
+		bool IsOceanExcludedAt(const XMFLOAT3& worldPosition) const;
+
+		// Returns true if the weather has the ocean enabled and the world space position is below the ocean surface,
+		//	and it is not inside an ocean exclusion volume. The ocean surface is approximate, see: GetOceanPosAt()
+		bool IsUnderOcean(const XMFLOAT3& worldPosition) const;
+
+		// Like IsUnderOcean(), also returns the sampled surface position on success.
+		// surfaceSlack allows a sample slightly above the waterline (for swimming hysteresis), never inside an exclusion.
+		bool TryGetOceanSurfaceAt(const XMFLOAT3& worldPosition, XMFLOAT3& surfacePosition, float surfaceSlack = 0) const;
+
+		// Sets the Polygon shape for an ocean exclusion volume with an outline that follows a spline.
+		//	The spline is handled as a looped spline that goes through the world space positions of its nodes.
+		//	subdivision: the number of outline points for every spline node (clamped to 1–32)
+		//	Returns false without changing the outline if the source or destination is invalid
+		bool SetOceanExclusionPolygonFromSpline(wi::ecs::Entity exclusionEntity, wi::ecs::Entity splineEntity, int subdivision = 8);
+
+		// Writes the shader data of the enabled ocean exclusion volumes into a byte array:
+		//	a ShaderOceanExclusion array, followed by the XMFLOAT2 outline points of the polygon shapes.
+		//	Returns the number of volumes written. This is what the oceanExclusionBuffer contains.
+		uint32_t WriteOceanExclusionShaderData(wi::vector<uint8_t>& data) const;
 
 		// Computes the LOD for an object AABB for a given view projection matrix
 		uint32_t ComputeObjectLODForView(const ObjectComponent& object, const wi::primitive::AABB& aabb, const MeshComponent& mesh, const XMMATRIX& ViewProjection) const;
