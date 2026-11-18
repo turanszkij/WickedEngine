@@ -4067,6 +4067,9 @@ void ExportModel_GLTF(const std::string& filename, Scene& scene)
 			state.gltfModel.extensionsUsed.push_back("KHR_materials_anisotropy");
 		}
 	}
+	// Each material adds its extensions, but glTF requires extensionsUsed to be unique
+	std::sort(state.gltfModel.extensionsUsed.begin(), state.gltfModel.extensionsUsed.end());
+	state.gltfModel.extensionsUsed.erase(std::unique(state.gltfModel.extensionsUsed.begin(), state.gltfModel.extensionsUsed.end()), state.gltfModel.extensionsUsed.end());
 
 	if (wiscene.materials.GetCount() == 0)
 	{
@@ -5077,9 +5080,8 @@ void ExportModel_GLTF(const std::string& filename, Scene& scene)
 
 		if(wiscene.lights.Contains(transformEntity))
 		{
-			tinygltf::Value::Object node_light_extension_builder;
-			node_light_extension_builder["light"] = tinygltf::Value(int(wiscene.lights.GetIndex(transformEntity)));
-			node_builder.extensions["KHR_lights_punctual"] = tinygltf::Value(node_light_extension_builder);
+			// tinygltf writes the node's KHR_lights_punctual extension from this, and removes it from node.extensions if it's not set
+			node_builder.light = int(wiscene.lights.GetIndex(transformEntity));
 		}
 
 		if(wiscene.cameras.Contains(transformEntity))
@@ -5149,23 +5151,38 @@ void ExportModel_GLTF(const std::string& filename, Scene& scene)
 		{
 			skin_builder.joints.push_back(state.nodeMap[arm_bone_id]);
 		}
-		
+
 		state.gltfModel.skins.push_back(skin_builder);
 	}
 
 	// Write Animations
+	// glTF animation channels can only target node transforms and morph weights, the other paths (light, sound, camera, material...) are skipped
+	auto is_exportable = [&](const AnimationComponent::AnimationChannel& channel) {
+		switch (channel.path)
+		{
+		case AnimationComponent::AnimationChannel::Path::TRANSLATION:
+		case AnimationComponent::AnimationChannel::Path::ROTATION:
+		case AnimationComponent::AnimationChannel::Path::SCALE:
+		case AnimationComponent::AnimationChannel::Path::WEIGHTS:
+			return state.nodeMap.find(channel.target) != state.nodeMap.end();
+		default:
+			return false;
+		}
+	};
 	wi::unordered_map<Entity, std::vector<size_t>> animation_datasets;
 	if(wiscene.animations.GetCount() > 0)
 	{
 		// Find accessor types first!
-		wi::unordered_map<Entity, size_t> animdata_vectype; 
+		wi::unordered_map<Entity, size_t> animdata_vectype;
 		for(size_t anim_id = 0; anim_id < wiscene.animations.GetCount(); ++anim_id)
 		{
 			auto& animation = wiscene.animations[anim_id];
 			for(auto& channel : animation.channels)
 			{
+				if (!is_exportable(channel))
+					continue;
 				if(animdata_vectype.find(animation.samplers[channel.samplerIndex].data) == animdata_vectype.end())
-					animdata_vectype[animation.samplers[channel.samplerIndex].data] = 
+					animdata_vectype[animation.samplers[channel.samplerIndex].data] =
 						(channel.path == AnimationComponent::AnimationChannel::Path::SCALE) ? TINYGLTF_TYPE_VEC3 :
 						(channel.path == AnimationComponent::AnimationChannel::Path::ROTATION) ? TINYGLTF_TYPE_VEC4 :
 						(channel.path == AnimationComponent::AnimationChannel::Path::TRANSLATION) ? TINYGLTF_TYPE_VEC3 :
@@ -5212,6 +5229,13 @@ void ExportModel_GLTF(const std::string& filename, Scene& scene)
 			ftime_accessor_builder.componentType = TINYGLTF_COMPONENT_TYPE_FLOAT;
 			ftime_accessor_builder.count = animdata.keyframe_times.size();
 			ftime_accessor_builder.type = TINYGLTF_TYPE_SCALAR;
+			if (!animdata.keyframe_times.empty())
+			{
+				// glTF requires min and max on animation input accessors
+				auto minmax = std::minmax_element(animdata.keyframe_times.begin(), animdata.keyframe_times.end());
+				ftime_accessor_builder.minValues = { double(*minmax.first) };
+				ftime_accessor_builder.maxValues = { double(*minmax.second) };
+			}
 			state.gltfModel.accessors.push_back(ftime_accessor_builder);
 
 			tinygltf::BufferView fdata_bufferView_builder;
@@ -5261,29 +5285,40 @@ void ExportModel_GLTF(const std::string& filename, Scene& scene)
 			animation_builder.name = name->name;
 		}
 
-		for(auto& sampler : animation.samplers)
-		{
-			tinygltf::AnimationSampler sampler_builder;
-			sampler_builder.input = (int)animation_datasets[sampler.data][1];
-			sampler_builder.output = (int)animation_datasets[sampler.data][3];
-			sampler_builder.interpolation = 
-				(sampler.mode == AnimationComponent::AnimationSampler::Mode::CUBICSPLINE) ? "CUBICSPLINE" :
-				(sampler.mode == AnimationComponent::AnimationSampler::Mode::STEP) ? "STEP" : "LINEAR";
-
-			animation_builder.samplers.push_back(sampler_builder);
-		}
+		// Only the samplers of exported channels are written, the others could have data that doesn't fit their accessor type
+		wi::unordered_map<uint32_t, int> sampler_remap;
 		for(auto& channel : animation.channels)
 		{
+			if (!is_exportable(channel))
+				continue;
+
+			auto it = sampler_remap.find(channel.samplerIndex);
+			if (it == sampler_remap.end())
+			{
+				const auto& sampler = animation.samplers[channel.samplerIndex];
+				tinygltf::AnimationSampler sampler_builder;
+				sampler_builder.input = (int)animation_datasets[sampler.data][1];
+				sampler_builder.output = (int)animation_datasets[sampler.data][3];
+				sampler_builder.interpolation =
+					(sampler.mode == AnimationComponent::AnimationSampler::Mode::CUBICSPLINE) ? "CUBICSPLINE" :
+					(sampler.mode == AnimationComponent::AnimationSampler::Mode::STEP) ? "STEP" : "LINEAR";
+
+				it = sampler_remap.insert({ channel.samplerIndex, (int)animation_builder.samplers.size() }).first;
+				animation_builder.samplers.push_back(sampler_builder);
+			}
+
 			tinygltf::AnimationChannel channel_builder;
 			channel_builder.target_node = state.nodeMap[channel.target];
-			channel_builder.sampler = (int)channel.samplerIndex;
-			channel_builder.target_path = 
+			channel_builder.sampler = it->second;
+			channel_builder.target_path =
 				(channel.path == AnimationComponent::AnimationChannel::Path::SCALE) ? "scale" :
 				(channel.path == AnimationComponent::AnimationChannel::Path::ROTATION) ? "rotation" :
 				(channel.path == AnimationComponent::AnimationChannel::Path::TRANSLATION) ? "translation" : "weights";
-			
+
 			animation_builder.channels.push_back(channel_builder);
 		}
+		if (animation_builder.channels.empty())
+			continue; // glTF requires at least one channel
 		state.gltfModel.animations.push_back(animation_builder);
 	}
 
@@ -5316,6 +5351,25 @@ void ExportModel_GLTF(const std::string& filename, Scene& scene)
 	state.gltfModel.scenes.push_back(scene_builder);
 	state.gltfModel.asset.version = "2.0";
 	state.gltfModel.asset.generator = "WickedEngine";
+
+	// Merge all buffers into one: a GLB can only store buffer 0 in its binary chunk, the others would become base64 data URIs
+	if (state.gltfModel.buffers.size() > 1)
+	{
+		std::vector<size_t> buffer_offsets;
+		tinygltf::Buffer merged_buffer;
+		for (auto& buffer : state.gltfModel.buffers)
+		{
+			merged_buffer.data.resize((merged_buffer.data.size() + 3) & ~size_t(3)); // accessor data must be 4 byte aligned
+			buffer_offsets.push_back(merged_buffer.data.size());
+			merged_buffer.data.insert(merged_buffer.data.end(), buffer.data.begin(), buffer.data.end());
+		}
+		for (auto& bufferView : state.gltfModel.bufferViews)
+		{
+			bufferView.byteOffset += buffer_offsets[bufferView.buffer];
+			bufferView.buffer = 0;
+		}
+		state.gltfModel.buffers = { merged_buffer };
+	}
 
 	auto file_extension = wi::helper::toUpper(wi::helper::GetExtensionFromFileName(filename));
 	if(file_extension == "GLB")
