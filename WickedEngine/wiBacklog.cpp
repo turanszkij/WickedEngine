@@ -117,6 +117,7 @@ namespace wi::backlog
 
 		void WriterLoop()
 		{
+			static std::deque<std::string> localQueue;
 			while (running.load())
 			{
 				std::unique_lock lock(queueMutex);
@@ -131,7 +132,6 @@ namespace wi::backlog
 					break;
 
 				// Process all queued entries
-				static std::deque<std::string> localQueue;
 				std::swap(localQueue, writeQueue);
 				lock.unlock();
 
