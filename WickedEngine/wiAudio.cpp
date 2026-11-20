@@ -114,9 +114,11 @@ namespace wi::audio
 			audioEngine->SetDebugConfiguration(&debugConfig);
 #endif // _DEBUG
 
-			hr = xaudio_check(audioEngine->CreateMasteringVoice(&masteringVoice));
+			// Fails when there is no audio device (cloud machines, CI agents), run without audio instead of asserting
+			hr = audioEngine->CreateMasteringVoice(&masteringVoice);
 			if (!SUCCEEDED(hr))
 			{
+				wilog_warning("wi::audio: CreateMasteringVoice failed with %s, audio is disabled", wi::helper::GetPlatformErrorString(hr).c_str());
 				return;
 			}
 
