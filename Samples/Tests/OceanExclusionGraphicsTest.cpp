@@ -1,10 +1,17 @@
-// Opt-in integration test: real Scene::Update uploads, HLSL on Vulkan and Jolt.
+// Opt-in integration test: real Scene::Update uploads, GPU shaders and Jolt.
 #include "WickedEngine.h"
+#if defined(__APPLE__)
+#include "wiGraphicsDevice_Metal.h"
+#else
 #include "wiGraphicsDevice_Vulkan.h"
+#include "wiGraphicsDevice_DX12.h"
+#endif
 #include "shaders/ShaderInterop_Renderer.h"
 
 #include <cmath>
 #include <iostream>
+#include <memory>
+#include <string>
 
 using namespace wi::ecs;
 using namespace wi::graphics;
@@ -71,7 +78,7 @@ namespace
 		device.WaitForGPU();
 
 		const XMFLOAT4* result = static_cast<const XMFLOAT4*>(readback.mapped_data);
-		if (!Check(result != nullptr, "Vulkan readback wasn't mapped"))
+		if (!Check(result != nullptr, "GPU readback wasn't mapped"))
 		{
 			return;
 		}
@@ -242,27 +249,59 @@ namespace
 	}
 }
 
-int main()
+int main(int argc, char** argv)
 {
+	if (argc != 2)
+	{
+		std::cerr << "Usage: OceanExclusionGraphicsTest <vulkan|dx12|metal>\n";
+		return 1;
+	}
+	const std::string backend = argv[1];
 	wi::jobsystem::Initialize();
 	wi::physics::Initialize();
 	wi::renderer::SetOcclusionCullingEnabled(false);
+	std::unique_ptr<GraphicsDevice> device;
+#if defined(PLATFORM_APPLE)
+	if (backend == "metal")
 	{
-		GraphicsDevice_Vulkan device(nullptr, ValidationMode::Disabled);
-		GetDevice() = &device;
+		device = std::make_unique<GraphicsDevice_Metal>(ValidationMode::Disabled);
+	}
+#else
+#ifdef WICKEDENGINE_BUILD_VULKAN
+	if (backend == "vulkan")
+	{
+		device = std::make_unique<GraphicsDevice_Vulkan>(nullptr, ValidationMode::Disabled);
+	}
+#endif
+#ifdef WICKEDENGINE_BUILD_DX12
+	if (backend == "dx12")
+	{
+		device = std::make_unique<GraphicsDevice_DX12>(ValidationMode::Disabled);
+	}
+#endif
+#endif
+	if (!device)
+	{
+		std::cerr << "Unsupported graphics backend for this build: " << backend << '\n';
+		wi::jobsystem::ShutDown();
+		return 1;
+	}
+
+	{
+		GetDevice() = device.get();
 		wi::shadercompiler::CompilerInput input;
-		input.format = ShaderFormat::SPIRV;
+		input.format = device->GetShaderFormat();
 		input.stage = ShaderStage::CS;
 		input.shadersourcefilename = WICKED_OCEAN_TEST_SHADER;
 		input.include_directories.push_back(WICKED_ENGINE_SHADER_DIR);
 		wi::shadercompiler::CompilerOutput compiled;
 		wi::shadercompiler::Compile(input, compiled);
 		Shader shader;
-		if (Check(compiled.IsValid(), "couldn't compile Vulkan regression shader") &&
-			Check(device.CreateShader(ShaderStage::CS, compiled.shaderdata, compiled.shadersize, &shader), "couldn't create Vulkan regression shader"))
+		if (Check(compiled.IsValid(), "couldn't compile regression shader") &&
+			Check(device->CreateShader(ShaderStage::CS, compiled.shaderdata, compiled.shadersize, &shader), "couldn't create regression shader"))
 		{
-			TestVolumeUploads(device, shader);
-			TestBuoyancyAndSwimming(device);
+			TestVolumeUploads(*device, shader);
+			TestBuoyancyAndSwimming(*device);
 		}
 		else
 		{
@@ -270,10 +309,11 @@ int main()
 		}
 		GetDevice() = nullptr;
 	}
+	device.reset();
 	wi::jobsystem::ShutDown();
 	if (failures == 0)
 	{
-		std::cout << "Ocean exclusion Vulkan and physics integration test passed\n";
+		std::cout << "Ocean exclusion graphics and physics integration test passed (" << backend << ")\n";
 	}
 	return failures == 0 ? 0 : 1;
 }
