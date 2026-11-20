@@ -220,8 +220,19 @@ namespace wi::terrain
 		wi::ecs::Entity entity = wi::ecs::INVALID_ENTITY;
 		wi::ecs::Entity grass_entity = wi::ecs::INVALID_ENTITY; // single grass patch for earlier terrain version
 		wi::ecs::Entity props_entity_old = wi::ecs::INVALID_ENTITY; // prop entity for earlier terrain version
-		float prop_density_current = 1;
+		float prop_density_current = 1; // prop density that the prop placements were computed with
 		float grass_density_current = 1;
+
+		struct PropCell
+		{
+			wi::ecs::Entity entity = wi::ecs::INVALID_ENTITY; // valid when objects are placed
+			bool demote = false; // objects will be removed when the static impostors that include this cell are swapped in
+			wi::vector<wi::vector<wi::scene::ImpostorComponent::StaticImpostor>> placements; // placement points per prop (not serialized)
+		};
+		wi::vector<PropCell> prop_cells;
+		bool props_placed = false; // placements of prop_cells are computed (not serialized)
+		bool prop_objects = false; // any of the prop_cells can have objects placed
+
 		struct GrassPatch
 		{
 			wi::ecs::Entity entity = wi::ecs::INVALID_ENTITY;
@@ -300,14 +311,7 @@ namespace wi::terrain
 		wi::HairParticleSystem grass_region_properties[MATERIAL_COUNT];
 		wi::scene::MaterialComponent grass_region_materials[MATERIAL_COUNT];
 		wi::unordered_map<Chunk, ChunkData> chunks;
-		struct PropChunkData
-		{
-			wi::ecs::Entity entity = wi::ecs::INVALID_ENTITY;
-			float prop_density_current = 1;
-		};
-		wi::unordered_map<Chunk, PropChunkData> prop_chunks;
 		Chunk center_chunk;
-		Chunk prop_center_chunk;
 		wi::noise::Perlin perlin_noise;
 		wi::vector<Prop> props;
 		int grass_chunk_dist = 1;
@@ -398,8 +402,41 @@ namespace wi::terrain
 		float cam_x = 0;
 		float cam_z = 0;
 
-		bool RemovePropChunksOverlapping(const Chunk& terrain_chunk);
-		bool PlacePropChunk(const Chunk& prop_chunk);
+		void ComputePropPlacements(const Chunk& chunk, ChunkData& chunk_data); // computes the prop placement points of the chunk's prop cells from the chunk surface
+		wi::vector<wi::ecs::Entity> prop_entities_old; // prop entities of earlier terrain version, they are removed after loading
+
+		// Prop static impostors:
+		struct PropImpostorPart
+		{
+			wi::ecs::Entity meshID = wi::ecs::INVALID_ENTITY;
+			XMFLOAT4X4 matrix = wi::math::IDENTITY_MATRIX; // object matrix relative to prop placement
+			bool has_impostor = false;
+			uint32_t buffer_index = 0; // index into prop_impostor_buffers
+		};
+		struct PropImpostorCache
+		{
+			wi::vector<uint8_t> data; // copy of Prop::data that the parts were created from
+			wi::vector<PropImpostorPart> parts;
+		};
+		wi::vector<PropImpostorCache> prop_impostor_cache;
+		// Static impostor buffers per impostor mesh, double buffered: the front buffer is used by the ImpostorComponent, the back buffer is refilled on the generation thread
+		struct PropImpostorBuffer
+		{
+			wi::ecs::Entity meshID = wi::ecs::INVALID_ENTITY;
+			wi::graphics::GPUBuffer buffers[2];
+			uint32_t counts[2] = {};
+			wi::graphics::GPUBuffer upload; // CPU writable staging buffer, copied into the back buffer with async copy
+		};
+		wi::vector<PropImpostorBuffer> prop_impostor_buffers;
+		int prop_impostor_front = 0; // index of the double buffers that is in use by ImpostorComponents
+		uint64_t prop_impostor_swap_frame = 0; // device frame when the double buffers were last swapped
+		bool prop_impostor_back_free = true; // back buffer is not in use by GPU, it can be refilled, otherwise new back buffers are allocated
+		bool prop_impostors_ready = false; // back buffer was refilled, waiting to be swapped
+		bool prop_impostors_dirty = false;
+		void RefreshPropImpostorParts();
+		void UpdatePropStaticImpostors(); // fills the back buffers, runs on generation thread
+		bool SwapPropStaticImpostors(); // swaps the double buffers if refilled and removes objects of demoted chunks (returns true if objects were removed), runs on main thread
+		void ClearPropStaticImpostors(); // removes static impostors from ImpostorComponents immediately, runs on main thread
 	};
 
 	struct Modifier
