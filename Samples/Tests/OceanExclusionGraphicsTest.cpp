@@ -186,12 +186,16 @@ namespace
 		const auto add_character = [&](float x) {
 			const Entity entity = scene.Entity_CreateTransform("swimming test character");
 			const Entity neck = scene.Entity_CreateTransform("neck");
+			const Entity left_foot = scene.Entity_CreateTransform("left foot");
+			const Entity right_foot = scene.Entity_CreateTransform("right foot");
 			TransformComponent& neck_transform = *scene.transforms.GetComponent(neck);
 			neck_transform.Translate(XMFLOAT3(x, -1, 4));
 			neck_transform.UpdateTransform();
 			HumanoidComponent& humanoid = scene.humanoids.Create(entity);
-			humanoid.SetRagdollDisabled(); // This fixture only supplies a neck, not a full skeleton.
+			humanoid.SetRagdollDisabled(); // The fixture supplies only the bones needed by swimming and foot IK.
 			humanoid.bones[size_t(HumanoidComponent::HumanoidBone::Neck)] = neck;
+			humanoid.bones[size_t(HumanoidComponent::HumanoidBone::LeftFoot)] = left_foot;
+			humanoid.bones[size_t(HumanoidComponent::HumanoidBone::RightFoot)] = right_foot;
 			CharacterComponent& character = scene.characters.Create(entity);
 			character.SetActive(true);
 			character.position = XMFLOAT3(x, -3, 4);
