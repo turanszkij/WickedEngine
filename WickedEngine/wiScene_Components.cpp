@@ -1312,7 +1312,7 @@ namespace wi::scene
 								XMStoreHalf4(vertices + ind, XMLoadFloat3(&morph.vertex_positions[i]));
 							}
 						}
-						buffer_offset += align(uint64_t(morph.vertex_positions.size() * sizeof(XMHALF4)), alignment);
+						buffer_offset += align(uint64_t(vertex_positions.size() * sizeof(XMHALF4)), alignment);
 					}
 					if (!morph.vertex_normals.empty())
 					{
@@ -1336,7 +1336,7 @@ namespace wi::scene
 								XMStoreHalf4(vertices + ind, XMLoadFloat3(&morph.vertex_normals[i]));
 							}
 						}
-						buffer_offset += align(uint64_t(morph.vertex_normals.size() * sizeof(XMHALF4)), alignment);
+						buffer_offset += align(uint64_t(vertex_normals.size() * sizeof(XMHALF4)), alignment);
 					}
 				}
 				vb_mor.size = buffer_offset - vb_mor.offset;
