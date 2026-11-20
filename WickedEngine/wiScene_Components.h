@@ -1151,6 +1151,22 @@ namespace wi::scene
 		mutable bool render_dirty = false;
 		int textureIndex = -1;
 
+		// Light-weight impostors that are not created from ObjectComponent, only support uniform scale and vertical rotation:
+		struct StaticImpostor
+		{
+			XMFLOAT3 position = XMFLOAT3(0, 0, 0);
+			uint32_t rotationY_scale = 0; // packed half2
+
+			void Create(const XMFLOAT3& pos, float rotationY, float scale) { position = pos; rotationY_scale = wi::math::pack_half2(rotationY, scale); }
+			float GetRotationY() const { return wi::math::f16tof32(rotationY_scale); }
+			float GetScale() const { return wi::math::f16tof32(rotationY_scale >> 16u); }
+		};
+		static_assert(sizeof(StaticImpostor) == 16);
+		wi::graphics::GPUBuffer static_impostors;
+		uint32_t static_impostor_count = 0;
+
+		uint32_t GetStaticImpostorCount() const { return static_impostors.IsValid() ? std::min(static_impostor_count, uint32_t(static_impostors.desc.size / sizeof(StaticImpostor))) : 0; }
+
 		constexpr void SetDirty(bool value = true) { set_flag(_flags, DIRTY, value); }
 		constexpr bool IsDirty() const { return _flags & DIRTY; }
 

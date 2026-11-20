@@ -224,47 +224,21 @@ namespace wi::terrain
 		weights.w *= norm;
 	};
 
-	inline int world_to_chunk_index(float world_pos, float scale, float scale_rcp)
-	{
-		return (int)std::floor((world_pos + chunk_half_width * scale) * chunk_width_rcp * scale_rcp);
-	}
-
-	inline void overlapped_chunk_range(float min_world, float max_world, float scale, float scale_rcp, int& index_min, int& index_max)
-	{
-		index_min = world_to_chunk_index(min_world, scale, scale_rcp);
-		const int end_index = world_to_chunk_index(max_world, scale, scale_rcp);
-		const float side = float(chunk_width - 1) * scale;
-		const float end_min = (float(end_index) - 0.5f) * side;
-		index_max = (max_world <= end_min) ? end_index - 1 : end_index;
-		if (index_max < index_min)
-		{
-			index_max = index_min;
-		}
-	}
-
-	inline int grass_cells_per_axis(float scale)
+	inline int cells_per_axis(float scale)
 	{
 		const int quads = chunk_width - 1;
-		int cells = (int)std::round(scale);
-		if (cells < 1)
-		{
-			cells = 1;
-		}
-		if (cells > quads)
-		{
-			cells = quads;
-		}
-		return cells;
+		const int cells = (int)std::round(scale);
+		return clamp(cells, 1, quads);
 	}
 
-	constexpr void grass_cell_quads(int cell, int cells, int& q0, int& q1)
+	constexpr void cell_quads(int cell, int cells, int& q0, int& q1)
 	{
 		const int quads = chunk_width - 1;
 		q0 = (cell * quads) / cells;
 		q1 = ((cell + 1) * quads) / cells;
 	}
 
-	constexpr bool grass_rect_in_range(float min_x, float max_x, float min_z, float max_z, float eye_x, float eye_z, float view)
+	constexpr bool rect_in_range(float min_x, float max_x, float min_z, float max_z, float eye_x, float eye_z, float view)
 	{
 		float dx = 0.0f;
 		if (eye_x < min_x)
@@ -287,13 +261,16 @@ namespace wi::terrain
 		return dx * dx + dz * dz <= view * view;
 	}
 
+	constexpr float rect_distance(float min_x, float min_z, float size, float x, float z)
+	{
+		const float dx = std::max(std::max(min_x - x, x - min_x - size), 0.0f);
+		const float dz = std::max(std::max(min_z - z, z - min_z - size), 0.0f);
+		return std::max(dx, dz);
+	}
+
 	constexpr float grass_spawn_distance(float view_distance, float length)
 	{
-		if (view_distance < 0.0f)
-			view_distance = 0.0f;
-		if (length < 0.0f)
-			length = 0.0f;
-		return view_distance * 1.2f + length; // 1.2: +20% dither fade
+		return std::max(0.0f, view_distance) * 1.2f + std::max(0.0f, length); // 1.2: +20% dither fade
 	}
 
 	constexpr uint32_t grass_strand_count(uint32_t vertices, float scale, float density)
@@ -671,7 +648,8 @@ namespace wi::terrain
 			}
 		}
 		chunks.clear();
-		prop_chunks.clear();
+		prop_impostors_dirty = true;
+		ClearPropStaticImpostors();
 		virtual_textures_in_use.clear();
 
 		if (chunkGroupEntity != INVALID_ENTITY)
@@ -787,117 +765,42 @@ namespace wi::terrain
 		}
 	}
 
-	bool Terrain::RemovePropChunksOverlapping(const Chunk& terrain_chunk)
+	void Terrain::ComputePropPlacements(const Chunk& chunk, ChunkData& chunk_data)
 	{
-		if (scene == nullptr)
+		const int cells = cells_per_axis(chunk_scale); // prop cells are about the size of an unscaled chunk
+		chunk_data.prop_cells.resize(size_t(cells * cells)); // objects of existing cells are kept (eg. loaded from file)
+		for (ChunkData::PropCell& cell : chunk_data.prop_cells)
 		{
-			return false;
+			cell.placements.clear();
+			cell.placements.resize(props.size());
 		}
-		const float half = chunk_half_width * chunk_scale;
-		const float pos_x = float(terrain_chunk.x * (chunk_width - 1)) * chunk_scale;
-		const float pos_z = float(terrain_chunk.z * (chunk_width - 1)) * chunk_scale;
-		int x0, x1, z0, z1;
-		overlapped_chunk_range(pos_x - half, pos_x + half, 1.0f, 1.0f, x0, x1);
-		overlapped_chunk_range(pos_z - half, pos_z + half, 1.0f, 1.0f, z0, z1);
-		bool removed = false;
-		for (int z = z0; z <= z1; ++z)
+		chunk_data.prop_density_current = prop_density;
+		chunk_data.props_placed = true;
+
+		if (!(prop_density > 0.0f) || props.empty() || chunk_data.mesh_vertex_positions == nullptr || chunk_data.blendmap_layers.size() < 4)
 		{
-			for (int x = x0; x <= x1; ++x)
+			return;
+		}
+		for (size_t layer = 0; layer < 4; ++layer)
+		{
+			if (chunk_data.blendmap_layers[layer].pixels.size() != vertexCount)
 			{
-				Chunk prop_chunk;
-				prop_chunk.x = x;
-				prop_chunk.z = z;
-				auto it = prop_chunks.find(prop_chunk);
-				if (it == prop_chunks.end())
-				{
-					continue;
-				}
-				if (it->second.entity != INVALID_ENTITY)
-				{
-					scene->Entity_Remove(it->second.entity);
-					removed = true;
-				}
-				prop_chunks.erase(it);
+				return;
 			}
 		}
-		return removed;
-	}
-
-	bool Terrain::PlacePropChunk(const Chunk& prop_chunk)
-	{
-		if (!(prop_density > 0.0f) || props.empty())
+		for (const BlendmapLayer& layer : chunk_data.spline_blendmap_layers)
 		{
-			return false;
-		}
-		{
-			auto existing = prop_chunks.find(prop_chunk);
-			if (existing != prop_chunks.end() && existing->second.entity != INVALID_ENTITY)
+			if (layer.pixels.size() != vertexCount)
 			{
-				return false;
+				return;
 			}
 		}
 
-		// Prop gen is fixed at chunk_scale=1
-		const float prop_pos_x = float(prop_chunk.x * (chunk_width - 1));
-		const float prop_pos_z = float(prop_chunk.z * (chunk_width - 1));
-		const float prop_min_x = prop_pos_x - chunk_half_width;
-		const float prop_max_x = prop_pos_x + chunk_half_width;
-		const float prop_min_z = prop_pos_z - chunk_half_width;
-		const float prop_max_z = prop_pos_z + chunk_half_width;
-
-		int tx0, tx1, tz0, tz1;
-		overlapped_chunk_range(prop_min_x, prop_max_x, chunk_scale, chunk_scale_rcp, tx0, tx1);
-		overlapped_chunk_range(prop_min_z, prop_max_z, chunk_scale, chunk_scale_rcp, tz0, tz1);
-		for (int tz = tz0; tz <= tz1; ++tz)
-		{
-			for (int tx = tx0; tx <= tx1; ++tx)
-			{
-				Chunk terrain_chunk;
-				terrain_chunk.x = tx;
-				terrain_chunk.z = tz;
-				for (const Chunk& removable : generator->removable_chunks)
-				{
-					if (removable == terrain_chunk)
-					{
-						return false; // this chunk's mesh is replaced before the generator scene is merged
-					}
-				}
-				auto it = chunks.find(terrain_chunk);
-				if (it == chunks.end())
-				{
-					return false;
-				}
-				const ChunkData& chunk_data = it->second;
-				if (chunk_data.invalidated || chunk_data.mesh_vertex_positions == nullptr || chunk_data.blendmap_layers.size() < 4)
-				{
-					return false;
-				}
-				for (size_t layer = 0; layer < 4; ++layer)
-				{
-					if (chunk_data.blendmap_layers[layer].pixels.size() != vertexCount)
-					{
-						return false;
-					}
-				}
-				for (const BlendmapLayer& layer : chunk_data.spline_blendmap_layers)
-				{
-					if (layer.pixels.size() != vertexCount)
-					{
-						return false;
-					}
-				}
-			}
-		}
-
-		PropChunkData& prop_data = prop_chunks[prop_chunk];
-		prop_data.entity = CreateEntity();
-		prop_data.prop_density_current = prop_density;
-		TransformComponent& prop_transform = generator->scene.transforms.Create(prop_data.entity);
-		prop_transform.ClearTransform();
-		prop_transform.Translate(XMFLOAT3(prop_pos_x, 0.0f, prop_pos_z));
-		prop_transform.UpdateTransform();
-		generator->scene.names.Create(prop_data.entity) = "props";
-		generator->scene.Component_Attach(prop_data.entity, chunkGroupEntity);
+		// The placement is computed in world space so it doesn't depend on chunk_scale, the chunk takes the placements within its own area:
+		const float chunk_min_x = (float(chunk.x * (chunk_width - 1)) - chunk_half_width) * chunk_scale;
+		const float chunk_max_x = (float(chunk.x * (chunk_width - 1)) + chunk_half_width) * chunk_scale;
+		const float chunk_min_z = (float(chunk.z * (chunk_width - 1)) - chunk_half_width) * chunk_scale;
+		const float chunk_max_z = (float(chunk.z * (chunk_width - 1)) + chunk_half_width) * chunk_scale;
 
 		auto mix_hash = [](uint64_t x) -> uint64_t
 		{
@@ -910,7 +813,7 @@ namespace wi::terrain
 		{
 			return float(h >> 40) * (1.0f / 16777216.0f);
 		};
-		auto region_at = [](const ChunkData& chunk_data, uint32_t index) -> XMFLOAT4
+		auto region_at = [&](uint32_t index) -> XMFLOAT4
 		{
 			return wi::Color(
 				chunk_data.blendmap_layers[0].pixels[index],
@@ -919,7 +822,7 @@ namespace wi::terrain
 				chunk_data.blendmap_layers[3].pixels[index]
 			);
 		};
-		auto spline_at = [](const ChunkData& chunk_data, uint32_t index) -> float
+		auto spline_at = [&](uint32_t index) -> float
 		{
 			if (chunk_data.spline_blendmap_layers.empty())
 			{
@@ -933,11 +836,6 @@ namespace wi::terrain
 			return factor / float(chunk_data.spline_blendmap_layers.size());
 		};
 
-		Chunk cached_chunk;
-		cached_chunk.raw = 0;
-		const ChunkData* cached = nullptr;
-		bool cache_valid = false;
-
 		for (size_t prop_index = 0; prop_index < props.size(); ++prop_index)
 		{
 			const Prop& prop = props[prop_index];
@@ -946,7 +844,7 @@ namespace wi::terrain
 				continue;
 			}
 
-			const float mean_count = prop.density * prop_data.prop_density_current;
+			const float mean_count = prop.density * prop_density;
 			if (!(mean_count > 0.0f))
 			{
 				continue;
@@ -965,10 +863,10 @@ namespace wi::terrain
 			{
 				slot_count = (int)std::ceil(std::min(keep, 16.0f));
 			}
-			const int cx0 = (int)std::floor(prop_min_x * cell_rcp) - 1;
-			const int cz0 = (int)std::floor(prop_min_z * cell_rcp) - 1;
-			const int cx1 = (int)std::ceil(prop_max_x * cell_rcp);
-			const int cz1 = (int)std::ceil(prop_max_z * cell_rcp);
+			const int cx0 = (int)std::floor(chunk_min_x * cell_rcp) - 1;
+			const int cz0 = (int)std::floor(chunk_min_z * cell_rcp) - 1;
+			const int cx1 = (int)std::ceil(chunk_max_x * cell_rcp);
+			const int cz1 = (int)std::ceil(chunk_max_z * cell_rcp);
 
 			for (int cz = cz0; cz <= cz1; ++cz)
 			{
@@ -997,7 +895,7 @@ namespace wi::terrain
 
 						const float world_x = (float(cx) + ju) * cell;
 						const float world_z = (float(cz) + jv) * cell;
-						if (world_x < prop_min_x || world_z < prop_min_z || world_x >= prop_max_x || world_z >= prop_max_z)
+						if (world_x < chunk_min_x || world_z < chunk_min_z || world_x >= chunk_max_x || world_z >= chunk_max_z)
 						{
 							continue;
 						}
@@ -1082,27 +980,9 @@ namespace wi::terrain
 							}
 						}
 
-						Chunk terrain_chunk;
-						terrain_chunk.x = world_to_chunk_index(world_x, chunk_scale, chunk_scale_rcp);
-						terrain_chunk.z = world_to_chunk_index(world_z, chunk_scale, chunk_scale_rcp);
-						if (!cache_valid || !(cached_chunk == terrain_chunk))
-						{
-							auto it = chunks.find(terrain_chunk);
-							cache_valid = it != chunks.end();
-							cached_chunk = terrain_chunk;
-							cached = cache_valid ? &it->second : nullptr;
-						}
-						if (!cache_valid || cached->mesh_vertex_positions == nullptr)
-						{
-							continue;
-						}
-
-						const float vx = (world_x - cached->position.x) * chunk_scale_rcp + chunk_half_width;
-						const float vz = (world_z - cached->position.z) * chunk_scale_rcp + chunk_half_width;
-						if (vx < 0.0f || vz < 0.0f || vx >= float(chunk_width - 1) || vz >= float(chunk_width - 1))
-						{
-							continue;
-						}
+						// Sample the chunk surface:
+						const float vx = clamp((world_x - chunk_min_x) * chunk_scale_rcp, 0.0f, float(chunk_width - 1));
+						const float vz = clamp((world_z - chunk_min_z) * chunk_scale_rcp, 0.0f, float(chunk_width - 1));
 
 						const int ix = std::min(int(std::floor(vx)), chunk_width - 2);
 						const int iz = std::min(int(std::floor(vz)), chunk_width - 2);
@@ -1130,18 +1010,18 @@ namespace wi::terrain
 							w2 = tx + tz - 1.0f;
 						}
 
-						const XMFLOAT3& p0 = cached->mesh_vertex_positions[i0];
-						const XMFLOAT3& p1 = cached->mesh_vertex_positions[i1];
-						const XMFLOAT3& p2 = cached->mesh_vertex_positions[i2];
+						const XMFLOAT3& p0 = chunk_data.mesh_vertex_positions[i0];
+						const XMFLOAT3& p1 = chunk_data.mesh_vertex_positions[i1];
+						const XMFLOAT3& p2 = chunk_data.mesh_vertex_positions[i2];
 						const XMFLOAT3 vertex_pos = XMFLOAT3(
 							p0.x * w0 + p1.x * w1 + p2.x * w2,
 							p0.y * w0 + p1.y * w1 + p2.y * w2,
 							p0.z * w0 + p1.z * w1 + p2.z * w2
 						);
 
-						const XMFLOAT4 r0 = region_at(*cached, i0);
-						const XMFLOAT4 r1 = region_at(*cached, i1);
-						const XMFLOAT4 r2 = region_at(*cached, i2);
+						const XMFLOAT4 r0 = region_at(i0);
+						const XMFLOAT4 r1 = region_at(i1);
+						const XMFLOAT4 r2 = region_at(i2);
 						XMFLOAT4 region = XMFLOAT4(
 							r0.x * w0 + r1.x * w1 + r2.x * w2,
 							r0.y * w0 + r1.y * w1 + r2.y * w2,
@@ -1149,53 +1029,271 @@ namespace wi::terrain
 							r0.w * w0 + r1.w * w1 + r2.w * w2
 						);
 						weight_norm(region);
-						const float spline_factor = spline_at(*cached, i0) * w0 + spline_at(*cached, i1) * w1 + spline_at(*cached, i2) * w2;
+						const float spline_factor = spline_at(i0) * w0 + spline_at(i1) * w1 + spline_at(i2) * w2;
 
 						const float region_weight = ((float*)&region)[clamp(prop.region, 0, 3)];
 						const float chance = (prop.region_power > 0 ? std::pow(region_weight, prop.region_power) : 1.0f) * (1.0f - saturate(spline_factor));
 						if (chance >= 0.5f)
 						{
-							wi::Archive archive = wi::Archive(prop.data.data(), prop.data.size());
-							EntitySerializer seri;
-							Entity entity = generator->scene.Entity_Serialize(
-								archive,
-								seri,
-								INVALID_ENTITY,
-								wi::scene::Scene::EntitySerializeFlags::RECURSIVE |
-								wi::scene::Scene::EntitySerializeFlags::KEEP_INTERNAL_ENTITY_REFERENCES
+							const int cell_x = std::min(int(vx * float(cells) * chunk_width_rcp), cells - 1);
+							const int cell_z = std::min(int(vz * float(cells) * chunk_width_rcp), cells - 1);
+							chunk_data.prop_cells[cell_x + cell_z * cells].placements[prop_index].emplace_back().Create(
+								XMFLOAT3(
+									chunk_data.position.x + vertex_pos.x,
+									vertex_pos.y + lerp(prop.min_y_offset, prop.max_y_offset, f0),
+									chunk_data.position.z + vertex_pos.z
+								),
+								XM_2PI * f2,
+								lerp(prop.min_size, prop.max_size, f1)
 							);
-							NameComponent* name = generator->scene.names.GetComponent(entity);
-							if (name != nullptr)
-							{
-								name->name += std::to_string(cx) + "_" + std::to_string(cz);
-								if (slot > 0)
-								{
-									name->name += "_" + std::to_string(slot);
-								}
-							}
-							TransformComponent* transform = generator->scene.transforms.GetComponent(entity);
-							if (transform == nullptr)
-							{
-								transform = &generator->scene.transforms.Create(entity);
-							}
-							transform->translation_local = XMFLOAT3(
-								cached->position.x + vertex_pos.x - prop_pos_x,
-								vertex_pos.y,
-								cached->position.z + vertex_pos.z - prop_pos_z
-							);
-							transform->translation_local.y += lerp(prop.min_y_offset, prop.max_y_offset, f0);
-							const float scaling = lerp(prop.min_size, prop.max_size, f1);
-							transform->Scale(XMFLOAT3(scaling, scaling, scaling));
-							transform->RotateRollPitchYaw(XMFLOAT3(0, XM_2PI * f2, 0));
-							transform->SetDirty();
-							transform->UpdateTransform();
-							generator->scene.Component_Attach(entity, prop_data.entity, true);
 						}
 					}
 				}
 			}
 		}
-		return true;
+	}
+
+	void Terrain::RefreshPropImpostorParts()
+	{
+		if (prop_impostor_cache.size() != props.size())
+		{
+			prop_impostor_cache.resize(props.size());
+			prop_impostors_dirty = true;
+		}
+		for (size_t prop_index = 0; prop_index < props.size(); ++prop_index)
+		{
+			const Prop& prop = props[prop_index];
+			PropImpostorCache& cache = prop_impostor_cache[prop_index];
+			if (cache.data != prop.data)
+			{
+				// Find the objects of the prop and their matrices relative to the placement point:
+				cache.data = prop.data;
+				cache.parts.clear();
+				prop_impostors_dirty = true;
+				if (!prop.data.empty())
+				{
+					Scene tmp_scene;
+					wi::Archive archive = wi::Archive(prop.data.data(), prop.data.size());
+					EntitySerializer seri;
+					Entity root = tmp_scene.Entity_Serialize(
+						archive,
+						seri,
+						INVALID_ENTITY,
+						wi::scene::Scene::EntitySerializeFlags::RECURSIVE |
+						wi::scene::Scene::EntitySerializeFlags::KEEP_INTERNAL_ENTITY_REFERENCES
+					);
+					// The root translation is replaced by the placement position, but its rotation and scale are kept:
+					XMVECTOR root_translation = XMVectorZero();
+					const TransformComponent* root_transform = tmp_scene.transforms.GetComponent(root);
+					if (root_transform != nullptr)
+					{
+						root_translation = XMLoadFloat3(&root_transform->translation_local);
+					}
+					const XMMATRIX inverse_root_translation = XMMatrixTranslationFromVector(XMVectorNegate(root_translation));
+					for (size_t i = 0; i < tmp_scene.objects.GetCount(); ++i)
+					{
+						PropImpostorPart& part = cache.parts.emplace_back();
+						part.meshID = tmp_scene.objects[i].meshID;
+						XMStoreFloat4x4(&part.matrix, tmp_scene.ComputeEntityMatrixRecursive(tmp_scene.objects.GetEntity(i)) * inverse_root_translation);
+					}
+				}
+			}
+			for (PropImpostorPart& part : cache.parts)
+			{
+				const bool has_impostor = scene->impostors.Contains(part.meshID);
+				if (part.has_impostor != has_impostor)
+				{
+					part.has_impostor = has_impostor;
+					prop_impostors_dirty = true;
+				}
+			}
+		}
+	}
+
+	void Terrain::UpdatePropStaticImpostors()
+	{
+		prop_impostors_dirty = false;
+		const int back = 1 - prop_impostor_front;
+
+		if (!prop_impostor_back_free)
+		{
+			for (PropImpostorBuffer& x : prop_impostor_buffers)
+			{
+				x.buffers[back] = {};
+				x.upload = {};
+			}
+		}
+
+		auto is_static_impostor = [](const ChunkData::PropCell& cell) {
+			return cell.entity == INVALID_ENTITY || cell.demote;
+		};
+
+		for (PropImpostorBuffer& x : prop_impostor_buffers)
+		{
+			x.counts[back] = 0;
+		}
+		for (PropImpostorCache& cache : prop_impostor_cache)
+		{
+			for (PropImpostorPart& part : cache.parts)
+			{
+				if (!part.has_impostor)
+					continue;
+				part.buffer_index = 0;
+				while (part.buffer_index < prop_impostor_buffers.size() && prop_impostor_buffers[part.buffer_index].meshID != part.meshID)
+				{
+					part.buffer_index++;
+				}
+				if (part.buffer_index == prop_impostor_buffers.size())
+				{
+					prop_impostor_buffers.emplace_back().meshID = part.meshID;
+				}
+			}
+		}
+
+		// Count static impostors per mesh:
+		for (auto& it : chunks)
+		{
+			for (const ChunkData::PropCell& cell : it.second.prop_cells)
+			{
+				if (!is_static_impostor(cell))
+					continue;
+				for (size_t prop_index = 0; prop_index < cell.placements.size() && prop_index < prop_impostor_cache.size(); ++prop_index)
+				{
+					for (const PropImpostorPart& part : prop_impostor_cache[prop_index].parts)
+					{
+						if (part.has_impostor)
+						{
+							prop_impostor_buffers[part.buffer_index].counts[back] += (uint32_t)cell.placements[prop_index].size();
+						}
+					}
+				}
+			}
+		}
+
+		// Grow buffers if needed:
+		GraphicsDevice* device = GetDevice();
+		for (PropImpostorBuffer& x : prop_impostor_buffers)
+		{
+			const uint64_t required_size = x.counts[back] * sizeof(ImpostorComponent::StaticImpostor);
+			if (required_size == 0)
+				continue;
+			if (x.buffers[back].desc.size < required_size)
+			{
+				GPUBufferDesc desc;
+				desc.size = required_size + required_size / 2; // grow with some extra
+				desc.bind_flags = BindFlag::SHADER_RESOURCE;
+				desc.misc_flags = ResourceMiscFlag::BUFFER_RAW;
+				bool success = device->CreateBuffer(&desc, nullptr, &x.buffers[back]);
+				assert(success);
+				device->SetName(&x.buffers[back], "wi::terrain::Terrain::prop_static_impostors");
+			}
+			if (x.upload.desc.size < required_size)
+			{
+				GPUBufferDesc desc;
+				desc.size = required_size + required_size / 2; // grow with some extra
+				desc.usage = Usage::UPLOAD;
+				bool success = device->CreateBuffer(&desc, nullptr, &x.upload);
+				assert(success);
+				device->SetName(&x.upload, "wi::terrain::Terrain::prop_static_impostors_upload");
+			}
+		}
+
+		// Write static impostors directly into the upload buffers:
+		static thread_local wi::vector<uint32_t> offsets;
+		offsets.clear();
+		offsets.resize(prop_impostor_buffers.size());
+		for (auto& it : chunks)
+		{
+			for (const ChunkData::PropCell& cell : it.second.prop_cells)
+			{
+				if (!is_static_impostor(cell))
+					continue;
+				for (size_t prop_index = 0; prop_index < cell.placements.size() && prop_index < prop_impostor_cache.size(); ++prop_index)
+				{
+					const wi::vector<ImpostorComponent::StaticImpostor>& placements = cell.placements[prop_index];
+					if (placements.empty())
+						continue;
+					for (const PropImpostorPart& part : prop_impostor_cache[prop_index].parts)
+					{
+						if (!part.has_impostor)
+							continue;
+						ImpostorComponent::StaticImpostor* dst = (ImpostorComponent::StaticImpostor*)prop_impostor_buffers[part.buffer_index].upload.mapped_data + offsets[part.buffer_index];
+						std::memcpy(dst, placements.data(), placements.size() * sizeof(ImpostorComponent::StaticImpostor));
+						offsets[part.buffer_index] += (uint32_t)placements.size();
+					}
+				}
+			}
+		}
+
+		// Copy to the GPU buffers on the copy queue, the main thread will swap them in when this is finished:
+		static thread_local wi::vector<GPUBufferCopyCommand> copies;
+		copies.clear();
+		for (PropImpostorBuffer& x : prop_impostor_buffers)
+		{
+			if (x.counts[back] == 0)
+				continue;
+			GPUBufferCopyCommand& copy = copies.emplace_back();
+			copy.dst = &x.buffers[back];
+			copy.src = &x.upload;
+			copy.size = x.counts[back] * sizeof(ImpostorComponent::StaticImpostor);
+		}
+		if (!copies.empty())
+		{
+			device->CopyBufferAsync(copies.data(), (uint32_t)copies.size(), "Terrain static impostors");
+		}
+		prop_impostors_ready = true;
+	}
+
+	bool Terrain::SwapPropStaticImpostors()
+	{
+		if (!prop_impostors_ready)
+			return false;
+		prop_impostors_ready = false;
+		prop_impostor_front = 1 - prop_impostor_front;
+		prop_impostor_swap_frame = GetDevice()->GetFrameCount();
+		for (PropImpostorBuffer& x : prop_impostor_buffers)
+		{
+			ImpostorComponent* impostor = scene->impostors.GetComponent(x.meshID);
+			if (impostor == nullptr)
+				continue;
+			impostor->static_impostors = x.buffers[prop_impostor_front];
+			impostor->static_impostor_count = x.counts[prop_impostor_front];
+		}
+		// Objects are removed in the same frame when their static impostors appear:
+		bool removed = false;
+		for (auto& it : chunks)
+		{
+			for (ChunkData::PropCell& cell : it.second.prop_cells)
+			{
+				if (!cell.demote)
+					continue;
+				cell.demote = false;
+				if (cell.entity != INVALID_ENTITY)
+				{
+					scene->Entity_Remove(cell.entity);
+					cell.entity = INVALID_ENTITY;
+					removed = true;
+				}
+			}
+		}
+		return removed;
+	}
+
+	void Terrain::ClearPropStaticImpostors()
+	{
+		for (PropImpostorBuffer& x : prop_impostor_buffers)
+		{
+			x.counts[0] = 0;
+			x.counts[1] = 0;
+			ImpostorComponent* impostor = scene == nullptr ? nullptr : scene->impostors.GetComponent(x.meshID);
+			if (impostor != nullptr)
+			{
+				impostor->static_impostors = {};
+				impostor->static_impostor_count = 0;
+			}
+		}
+		prop_impostors_ready = false;
+		prop_impostor_swap_frame = GetDevice()->GetFrameCount(); // buffers can still be in use by GPU
 	}
 
 	void Terrain::Generation_Update(const CameraComponent& camera)
@@ -1285,8 +1383,8 @@ namespace wi::terrain
 				}
 			}
 			chunks.clear();
-			prop_chunks.clear();
 			virtual_textures_in_use.clear();
+			ClearPropStaticImpostors();
 			return;
 		}
 
@@ -1312,7 +1410,7 @@ namespace wi::terrain
 				ChunkData& chunk_data = it->second;
 				scene->Entity_Remove(chunk_data.entity);
 				chunk_data.props_entity_old = INVALID_ENTITY;
-				props_regenerated |= RemovePropChunksOverlapping(chunk);
+				props_regenerated |= chunk_data.prop_objects;
 				if (chunk_data.vt != nullptr)
 				{
 					chunk_data.vt->invalidate();
@@ -1325,6 +1423,17 @@ namespace wi::terrain
 		props_regenerated |= generator->scene.rigidbodies.GetCount() >= 1000;
 		scene->MergeFastInternal(generator->scene);
 
+		// Static impostors refilled by generation thread are swapped in the same frame as its objects are merged:
+		props_regenerated |= SwapPropStaticImpostors();
+
+		// Prop objects of earlier terrain version are removed, props are placed on the chunks again:
+		for (Entity entity : prop_entities_old)
+		{
+			scene->Entity_Remove(entity);
+			props_regenerated = true;
+		}
+		prop_entities_old.clear();
+
 		chunk_scale_rcp = 1.0f / chunk_scale;
 		cam_height = camera.Eye.y;
 		cam_x = camera.Eye.x;
@@ -1334,12 +1443,10 @@ namespace wi::terrain
 		{
 			center_chunk.x = (int)std::floor((camera.Eye.x + chunk_half_width) * chunk_width_rcp * chunk_scale_rcp);
 			center_chunk.z = (int)std::floor((camera.Eye.z + chunk_half_width) * chunk_width_rcp * chunk_scale_rcp);
-			// Prop grid is chunk_scale 1, so the center uses the unscaled 66m formula.
-			prop_center_chunk.x = (int)std::floor((camera.Eye.x + chunk_half_width) * chunk_width_rcp);
-			prop_center_chunk.z = (int)std::floor((camera.Eye.z + chunk_half_width) * chunk_width_rcp);
 		}
 
 		const int removal_threshold = generation + 2;
+		const float prop_distance = float(prop_generation * (chunk_width - 1)); // prop distance is in unscaled chunks
 		GraphicsDevice* device = GetDevice();
 
 		// Check whether there are any materials that would write to virtual textures:
@@ -1459,14 +1566,16 @@ namespace wi::terrain
 					{
 						chunk_data.vt->free(atlas);
 					}
-					props_regenerated |= RemovePropChunksOverlapping(chunk);
+					props_regenerated |= chunk_data.prop_objects;
+					prop_impostors_dirty |= chunk_data.props_placed; // static impostors of the chunk are removed
 					scene->Entity_Remove(it->second.entity);
 					it = chunks.erase(it);
 					continue; // don't increment iterator
 				}
 				else
 				{
-					const int cells = grass_cells_per_axis(chunk_scale);
+					// grass removals:
+					const int cells = cells_per_axis(chunk_scale);
 					const float origin_x = chunk_data.position.x - chunk_half_width * chunk_scale;
 					const float origin_z = chunk_data.position.z - chunk_half_width * chunk_scale;
 					for (size_t patch_index = 0; patch_index < chunk_data.grass_patches.size();)
@@ -1480,7 +1589,7 @@ namespace wi::terrain
 						{
 							int qz0 = 0;
 							int qz1 = 0;
-							grass_cell_quads(cz, cells, qz0, qz1);
+							cell_quads(cz, cells, qz0, qz1);
 							if ((uint32_t)qz0 != patch.z0 || (uint32_t)qz1 != patch.z1)
 							{
 								continue;
@@ -1489,7 +1598,7 @@ namespace wi::terrain
 							{
 								int qx0 = 0;
 								int qx1 = 0;
-								grass_cell_quads(cx, cells, qx0, qx1);
+								cell_quads(cx, cells, qx0, qx1);
 								if ((uint32_t)qx0 == patch.x0 && (uint32_t)qx1 == patch.x1)
 								{
 									layout = true;
@@ -1501,7 +1610,7 @@ namespace wi::terrain
 						const float max_x = origin_x + float(patch.x1) * chunk_scale;
 						const float min_z = origin_z + float(patch.z0) * chunk_scale;
 						const float max_z = origin_z + float(patch.z1) * chunk_scale;
-						const bool keep = IsGrassEnabled() && region_active && dist <= grass_chunk_dist && layout && grass_rect_in_range(min_x, max_x, min_z, max_z, cam_x, cam_z, view);
+						const bool keep = IsGrassEnabled() && region_active && dist <= grass_chunk_dist && layout && rect_in_range(min_x, max_x, min_z, max_z, cam_x, cam_z, view);
 						if (!keep)
 						{
 							if (patch.entity != INVALID_ENTITY)
@@ -1590,6 +1699,56 @@ namespace wi::terrain
 				}
 			}
 
+			// Props are placed again when they were changed:
+			if (chunk_data.props_placed && std::abs(chunk_data.prop_density_current - prop_density) > FLT_EPSILON)
+			{
+				for (ChunkData::PropCell& cell : chunk_data.prop_cells)
+				{
+					if (cell.entity != INVALID_ENTITY)
+					{
+						scene->Entity_Remove(cell.entity);
+						props_regenerated = true;
+					}
+				}
+				chunk_data.prop_cells.clear();
+				chunk_data.props_placed = false;
+				chunk_data.prop_objects = false;
+				prop_impostors_dirty = true;
+			}
+
+			// Prop objects that are out of prop distance are demoted to static impostors:
+			if (chunk_data.prop_objects && IsRemovalEnabled())
+			{
+				chunk_data.prop_objects = false;
+				const int cells = cells_per_axis(chunk_scale);
+				const float cell_size = float(chunk_width - 1) * chunk_scale / float(cells);
+				const float chunk_min_x = chunk_data.position.x - chunk_half_width * chunk_scale;
+				const float chunk_min_z = chunk_data.position.z - chunk_half_width * chunk_scale;
+				for (int cell_index = 0; cell_index < (int)chunk_data.prop_cells.size(); ++cell_index)
+				{
+					ChunkData::PropCell& cell = chunk_data.prop_cells[cell_index];
+					if (cell.entity == INVALID_ENTITY)
+						continue;
+					const float distance = rect_distance(chunk_min_x + float(cell_index % cells) * cell_size, chunk_min_z + float(cell_index / cells) * cell_size, cell_size, cam_x, cam_z);
+					const bool demote = distance > prop_distance + chunk_half_width; // with half unscaled chunk tolerance, so objects are not replaced back and forth at the border
+					if (demote && !chunk_data.props_placed)
+					{
+						// Placement points are unknown (eg. loaded from file), remove objects, placement will be recomputed:
+						scene->Entity_Remove(cell.entity);
+						cell.entity = INVALID_ENTITY;
+						props_regenerated = true;
+						continue;
+					}
+					chunk_data.prop_objects = true;
+					if (cell.demote != demote)
+					{
+						// Objects will be removed when the static impostors that include this cell are swapped in
+						cell.demote = demote;
+						prop_impostors_dirty = true;
+					}
+				}
+			}
+
 			RigidBodyPhysicsComponent* rigidbody = scene->rigidbodies.GetComponent(chunk_data.entity);
 			if (IsPhysicsEnabled())
 			{
@@ -1626,27 +1785,8 @@ namespace wi::terrain
 			it++;
 		}
 
-		// Prop chunks stream on the 66m grid, with the same distance and density test terrain chunks used at chunk_scale 1.
-		if (IsRemovalEnabled())
-		{
-			for (auto prop_it = prop_chunks.begin(); prop_it != prop_chunks.end();)
-			{
-				const Chunk& prop_chunk = prop_it->first;
-				PropChunkData& prop_data = prop_it->second;
-				const int prop_dist = std::max(std::abs(prop_center_chunk.x - prop_chunk.x), std::abs(prop_center_chunk.z - prop_chunk.z));
-				if (prop_dist > prop_generation || std::abs(prop_data.prop_density_current - prop_density) > std::numeric_limits<float>::epsilon())
-				{
-					if (prop_data.entity != INVALID_ENTITY)
-					{
-						scene->Entity_Remove(prop_data.entity);
-						props_regenerated = true;
-					}
-					prop_it = prop_chunks.erase(prop_it);
-					continue;
-				}
-				++prop_it;
-			}
-		}
+		// Checks whether prop meshes have ImpostorComponent:
+		RefreshPropImpostorParts();
 
 		if (props_regenerated)
 		{
@@ -1675,6 +1815,9 @@ namespace wi::terrain
 			assert(success);
 			device->SetName(&chunk_buffer, "wi::terrain::Terrain::chunk_buffer");
 		}
+
+		// The static impostor back buffer can be reused when the GPU surely finished using it (and the last async copy from the upload buffer), otherwise new ones are allocated:
+		prop_impostor_back_free = !prop_impostors_ready && device->GetFrameCount() >= prop_impostor_swap_frame + GraphicsDevice::GetBufferCount() + 1;
 
 		// Start the generation on a background thread and keep it running until the next frame
 		generator->cancelled.store(false);
@@ -1757,6 +1900,11 @@ namespace wi::terrain
 						generator->removable_chunks.push_back(chunk);
 						chunk_data.grass_entity = INVALID_ENTITY;
 						chunk_data.grass_patches.clear();
+						for (ChunkData::PropCell& cell : chunk_data.prop_cells)
+						{
+							cell.entity = INVALID_ENTITY; // prop objects are removed together with the previous chunk entity on the main thread
+							cell.demote = false;
+						}
 					}
 					ObjectComponent& object = *generator->scene.objects.GetComponent(chunk_data.entity);
 					object.lod_bias = lod_bias;
@@ -2040,13 +2188,15 @@ namespace wi::terrain
 					CreateChunkRegionTexture(chunk_data);
 
 					wi::jobsystem::Wait(ctx);
+
+					// Prop placements are computed together with the chunk mesh:
+					ComputePropPlacements(chunk, chunk_data);
 				}
 			};
 
-			// Place grass on a finished chunk and clear its invalidated flag.
-			// Mutates the generator scene (creates grass entities), so it runs
+			// Place grass and prop objects on a finished chunk and clear its invalidated flag.
+			// Mutates the generator scene (creates grass and prop entities), so it runs
 			// serially after the chunk's build_chunk() job has completed.
-			// Props are placed on their own grid, not here.
 			auto place_chunk = [&](const Chunk& chunk)
 			{
 				const int dist = std::max(std::abs(center_chunk.x - chunk.x), std::abs(center_chunk.z - chunk.z));
@@ -2060,7 +2210,7 @@ namespace wi::terrain
 					{
 						ChunkData& chunk_data = it->second;
 						// Multiple grass chunks can be placed onto 1 terrain chunk, important for large terrain chunks to not blow up VRAM usage with large grass particle system:
-						const int cells = grass_cells_per_axis(chunk_scale);
+						const int cells = cells_per_axis(chunk_scale);
 						const float origin_x = chunk_data.position.x - chunk_half_width * chunk_scale;
 						const float origin_z = chunk_data.position.z - chunk_half_width * chunk_scale;
 						bool budget_hit = false;
@@ -2079,17 +2229,17 @@ namespace wi::terrain
 							{
 								int z0 = 0;
 								int z1 = 0;
-								grass_cell_quads(cz, cells, z0, z1);
+								cell_quads(cz, cells, z0, z1);
 								const float min_z = origin_z + float(z0) * chunk_scale;
 								const float max_z = origin_z + float(z1) * chunk_scale;
 								for (int cx = 0; cx < cells; ++cx)
 								{
 									int x0 = 0;
 									int x1 = 0;
-									grass_cell_quads(cx, cells, x0, x1);
+									cell_quads(cx, cells, x0, x1);
 									const float min_x = origin_x + float(x0) * chunk_scale;
 									const float max_x = origin_x + float(x1) * chunk_scale;
-									if (!grass_rect_in_range(min_x, max_x, min_z, max_z, cam_x, cam_z, view))
+									if (!rect_in_range(min_x, max_x, min_z, max_z, cam_x, cam_z, view))
 										continue;
 									bool exists = false;
 									for (const ChunkData::GrassPatch& patch : chunk_data.grass_patches)
@@ -2149,6 +2299,91 @@ namespace wi::terrain
 					}
 				}
 
+				// Prop objects are placed in the prop cells within prop distance, the other placements remain static impostors:
+				it = chunks.find(chunk);
+				if (it != chunks.end() && it->second.entity != INVALID_ENTITY && it->second.props_placed)
+				{
+					ChunkData& chunk_data = it->second;
+					const float prop_distance = float(prop_generation * (chunk_width - 1)); // prop distance is in unscaled chunks
+					const float chunk_min_x = chunk_data.position.x - chunk_half_width * chunk_scale;
+					const float chunk_min_z = chunk_data.position.z - chunk_half_width * chunk_scale;
+					if (rect_distance(chunk_min_x, chunk_min_z, float(chunk_width - 1) * chunk_scale, cam_x, cam_z) <= prop_distance)
+					{
+						const int cells = cells_per_axis(chunk_scale);
+						const float cell_size = float(chunk_width - 1) * chunk_scale / float(cells);
+						for (int cell_index = 0; cell_index < (int)chunk_data.prop_cells.size(); ++cell_index)
+						{
+							ChunkData::PropCell& cell = chunk_data.prop_cells[cell_index];
+							if (cell.entity != INVALID_ENTITY)
+								continue;
+							if (rect_distance(chunk_min_x + float(cell_index % cells) * cell_size, chunk_min_z + float(cell_index / cells) * cell_size, cell_size, cam_x, cam_z) > prop_distance)
+								continue;
+							bool has_placements = false;
+							for (auto& placements : cell.placements)
+							{
+								has_placements |= !placements.empty();
+							}
+							if (!has_placements)
+								continue;
+
+							cell.entity = CreateEntity();
+							generator->scene.transforms.Create(cell.entity);
+							generator->scene.names.Create(cell.entity) = "props";
+							generator->scene.Component_Attach(cell.entity, chunk_data.entity, true);
+
+							for (size_t prop_index = 0; prop_index < props.size() && prop_index < cell.placements.size(); ++prop_index)
+							{
+								const Prop& prop = props[prop_index];
+								if (prop.data.empty())
+								{
+									continue;
+								}
+								const wi::vector<ImpostorComponent::StaticImpostor>& placements = cell.placements[prop_index];
+								for (size_t placement_index = 0; placement_index < placements.size(); ++placement_index)
+								{
+									const ImpostorComponent::StaticImpostor& placement = placements[placement_index];
+									wi::Archive archive = wi::Archive(prop.data.data(), prop.data.size());
+									EntitySerializer seri;
+									Entity entity = generator->scene.Entity_Serialize(
+										archive,
+										seri,
+										INVALID_ENTITY,
+										wi::scene::Scene::EntitySerializeFlags::RECURSIVE |
+										wi::scene::Scene::EntitySerializeFlags::KEEP_INTERNAL_ENTITY_REFERENCES
+									);
+									NameComponent* name = generator->scene.names.GetComponent(entity);
+									if (name != nullptr)
+									{
+										name->name += std::to_string(chunk.x) + "_" + std::to_string(chunk.z) + "_" + std::to_string(cell_index) + "_" + std::to_string(placement_index);
+									}
+									TransformComponent* transform = generator->scene.transforms.GetComponent(entity);
+									if (transform == nullptr)
+									{
+										transform = &generator->scene.transforms.Create(entity);
+									}
+									transform->translation_local = XMFLOAT3(
+										placement.position.x - chunk_data.position.x,
+										placement.position.y,
+										placement.position.z - chunk_data.position.z
+									);
+									const float scaling = placement.GetScale();
+									transform->Scale(XMFLOAT3(scaling, scaling, scaling));
+									transform->RotateRollPitchYaw(XMFLOAT3(0, placement.GetRotationY(), 0));
+									transform->SetDirty();
+									transform->UpdateTransform();
+									generator->scene.Component_Attach(entity, cell.entity, true);
+								}
+							}
+							chunk_data.prop_objects = true;
+							prop_impostors_dirty = true; // placements of this cell are no longer static impostors
+							generated_something = true;
+							if (timer.elapsed_milliseconds() > generation_time_budget_milliseconds)
+							{
+								break;
+							}
+						}
+					}
+				}
 
 				it = chunks.find(chunk); // re-query!
 				if (it != chunks.end() && it->second.entity != INVALID_ENTITY)
@@ -2175,6 +2410,26 @@ namespace wi::terrain
 			wi::jobsystem::context build_ctx;
 			build_ctx.priority = wi::jobsystem::Priority::Low;
 
+			// Prop placements that are missing on existing chunks (loaded from file, or props were changed) are recomputed:
+			for (auto& it : chunks)
+			{
+				const ChunkData& chunk_data = it.second;
+				if (!chunk_data.props_placed && !chunk_data.invalidated && chunk_data.entity != INVALID_ENTITY && chunk_data.mesh_vertex_positions != nullptr)
+				{
+					generator->build_batch.push_back(it.first);
+				}
+			}
+			if (!generator->build_batch.empty())
+			{
+				wi::jobsystem::Dispatch(build_ctx, uint32_t(generator->build_batch.size()), 1, [&](wi::jobsystem::JobArgs args) {
+					const Chunk& chunk = generator->build_batch[args.jobIndex];
+					ComputePropPlacements(chunk, chunks.find(chunk)->second);
+				});
+				wi::jobsystem::Wait(build_ctx);
+				generator->build_batch.clear();
+				prop_impostors_dirty = true;
+			}
+
 			// Set up and build every chunk queued in the batch, then clear it.
 			// Returns false if the per-frame time budget was exceeded (the
 			// caller should stop).
@@ -2200,8 +2455,9 @@ namespace wi::terrain
 
 				wi::jobsystem::Wait(build_ctx);
 				generated_something = true;
+				prop_impostors_dirty |= !props.empty(); // prop placements of the built chunks are static impostors until objects are placed on them
 
-				// Place grass on the chunks we just built:
+				// Place grass and prop objects on the chunks we just built:
 				for (const Chunk& chunk : generator->build_batch)
 				{
 					place_chunk(chunk);
@@ -2257,22 +2513,6 @@ namespace wi::terrain
 
 				return true;
 			};
-			auto request_props = [&](int offset_x, int offset_z) -> bool {
-				Chunk prop_chunk = prop_center_chunk;
-				prop_chunk.x += offset_x;
-				prop_chunk.z += offset_z;
-				if (PlacePropChunk(prop_chunk))
-				{
-					generated_something = true;
-					if (timer.elapsed_milliseconds() > generation_time_budget_milliseconds)
-					{
-						generator->cancelled.store(true);
-						return false;
-					}
-				}
-				return !generator->cancelled.load();
-			};
-
 			auto request_chunk_spiral = [&](int start, int radius) {
 				if (generator->cancelled.load())
 					return;
@@ -2320,54 +2560,6 @@ namespace wi::terrain
 				flush_build_batch();
 			};
 
-			auto request_prop_spiral = [&](int start, int radius) {
-				if (generator->cancelled.load())
-					return;
-				if (!(prop_density > 0.0f) || props.empty())
-					return;
-				if (!request_props(0, 0))
-					return;
-
-				for (int growth = start; growth < radius; ++growth)
-				{
-					const int side = 2 * (growth + 1);
-					int x = -growth - 1;
-					int z = -growth - 1;
-					for (int i = 0; i < side; ++i)
-					{
-						if (!request_props(x, z))
-						{
-							return;
-						}
-						x++;
-					}
-					for (int i = 0; i < side; ++i)
-					{
-						if (!request_props(x, z))
-						{
-							return;
-						}
-						z++;
-					}
-					for (int i = 0; i < side; ++i)
-					{
-						if (!request_props(x, z))
-						{
-							return;
-						}
-						x--;
-					}
-					for (int i = 0; i < side; ++i)
-					{
-						if (!request_props(x, z))
-						{
-							return;
-						}
-						z--;
-					}
-				}
-			};
-
 			// priority invalidation queue:
 			//	This doesn't necessarily finish every frame, that's why it's a queue, next frame will pick up earlier requests before newer ones
 			while (!generator->priority_invalidation.empty())
@@ -2379,26 +2571,22 @@ namespace wi::terrain
 				{
 					if (!request_chunk(chunk.x - center_chunk.x, chunk.z - center_chunk.z))
 					{
-						return;
+						break; // cancelled
 					}
 				}
 			}
 
-			const int gen_loop = std::max(generation, prop_generation);
-			for (int i = 0; i < gen_loop; ++i)
+			for (int i = 0; i < generation; ++i)
 			{
 				if (generator->cancelled.load())
-					return;
+					break;
 
-				if (i < generation)
-				{
-					request_chunk_spiral(i, i + 1);
-				}
+				request_chunk_spiral(i, i + 1);
+			}
 
-				if (i < prop_generation)
-				{
-					request_prop_spiral(i, i + 1);
-				}
+			if (prop_impostors_dirty)
+			{
+				UpdatePropStaticImpostors();
 			}
 
 		});
@@ -3219,7 +3407,7 @@ namespace wi::terrain
 
 	void Terrain::InvalidateProps()
 	{
-		for (auto it = prop_chunks.begin(); it != prop_chunks.end(); ++it)
+		for (auto it = chunks.begin(); it != chunks.end(); ++it)
 		{
 			it->second.prop_density_current = 0;
 		}
@@ -3275,14 +3463,6 @@ namespace wi::terrain
 
 			archive >> center_chunk.x;
 			archive >> center_chunk.z;
-			if (terrain_version < 7)
-			{
-				// Older scenes stored props on terrain chunks. Place the new chunk grid on that center until the camera takes over.
-				const float anchor_x = float(center_chunk.x * (chunk_width - 1)) * chunk_scale;
-				const float anchor_z = float(center_chunk.z * (chunk_width - 1)) * chunk_scale;
-				prop_center_chunk.x = world_to_chunk_index(anchor_x, 1.0f, 1.0f);
-				prop_center_chunk.z = world_to_chunk_index(anchor_z, 1.0f, 1.0f);
-			}
 
 			if (terrain_version >= 1)
 			{
@@ -3500,6 +3680,17 @@ namespace wi::terrain
 						}
 					}
 				}
+				if (terrain_version >= 9)
+				{
+					size_t prop_cell_count = 0;
+					archive >> prop_cell_count;
+					chunk_data.prop_cells.resize(prop_cell_count);
+					for (ChunkData::PropCell& cell : chunk_data.prop_cells)
+					{
+						SerializeEntity(archive, cell.entity, seri);
+					}
+					chunk_data.prop_objects = prop_cell_count > 0;
+				}
 			}
 
 			archive >> count;
@@ -3659,6 +3850,14 @@ namespace wi::terrain
 						archive << patch.region;
 					}
 				}
+				if (terrain_version >= 9)
+				{
+					archive << chunk_data.prop_cells.size();
+					for (ChunkData::PropCell& cell : chunk_data.prop_cells)
+					{
+						SerializeEntity(archive, cell.entity, seri);
+					}
+				}
 			}
 
 			archive << modifiers.size();
@@ -3793,38 +3992,24 @@ namespace wi::terrain
 
 		perlin_noise.Serialize(archive);
 
-		if (terrain_version >= 7)
+		if (archive.IsReadMode() && terrain_version >= 7 && terrain_version < 9)
 		{
-			if (archive.IsReadMode())
+			// Back compat stuff
+			Chunk prop_center_chunk;
+			archive >> prop_center_chunk.x;
+			archive >> prop_center_chunk.z;
+			size_t prop_chunk_count = 0;
+			archive >> prop_chunk_count;
+			for (size_t i = 0; i < prop_chunk_count; ++i)
 			{
-				archive >> prop_center_chunk.x;
-				archive >> prop_center_chunk.z;
-				size_t prop_chunk_count = 0;
-				archive >> prop_chunk_count;
-				prop_chunks.clear();
-				prop_chunks.reserve(prop_chunk_count);
-				for (size_t i = 0; i < prop_chunk_count; ++i)
-				{
-					Chunk prop_chunk;
-					archive >> prop_chunk.x;
-					archive >> prop_chunk.z;
-					PropChunkData& prop_data = prop_chunks[prop_chunk];
-					SerializeEntity(archive, prop_data.entity, seri);
-					archive >> prop_data.prop_density_current;
-				}
-			}
-			else
-			{
-				archive << prop_center_chunk.x;
-				archive << prop_center_chunk.z;
-				archive << prop_chunks.size();
-				for (auto& it : prop_chunks)
-				{
-					archive << it.first.x;
-					archive << it.first.z;
-					SerializeEntity(archive, it.second.entity, seri);
-					archive << it.second.prop_density_current;
-				}
+				Chunk prop_chunk;
+				archive >> prop_chunk.x;
+				archive >> prop_chunk.z;
+				Entity entity = INVALID_ENTITY;
+				SerializeEntity(archive, entity, seri);
+				prop_entities_old.push_back(entity);
+				float prop_density_current = 0;
+				archive >> prop_density_current;
 			}
 		}
 	}
