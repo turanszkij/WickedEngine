@@ -23,9 +23,6 @@ jobs:
       with:
         msbuild-architecture: x64
 
-    - name: Install latest clang
-      run: choco upgrade llvm --no-progress -y
-
     - name: Restore Ccache database
       id: restore-ccache
       uses: actions/cache/restore@v4
@@ -159,6 +156,9 @@ jobs:
     name: windows (${{ matrix.name }})
     steps:
     - uses: actions/checkout@v4
+
+    - name: Install latest clang
+      run: choco upgrade llvm --no-progress -y
 
     - name: Compile with embedded shaders
       shell: cmd
