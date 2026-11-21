@@ -5463,10 +5463,14 @@ using namespace vulkan_internal;
 			&internal_state->sizeInfo
 		);
 
-		// Backing memory as buffer:
+		// Backing memory as buffer: [acceleration structure | scratch]
+		const VkDeviceSize scratch_alignment = std::max(
+			(VkDeviceSize)acceleration_structure_properties.minAccelerationStructureScratchOffsetAlignment,
+			(VkDeviceSize)256 // VkAccelerationStructureCreateInfoKHR::offset must be a multiple of 256
+		);
 		VkBufferCreateInfo bufferInfo = {};
 		bufferInfo.sType = VK_STRUCTURE_TYPE_BUFFER_CREATE_INFO;
-		bufferInfo.size = align(internal_state->sizeInfo.accelerationStructureSize, (VkDeviceSize)acceleration_structure_properties.minAccelerationStructureScratchOffsetAlignment) + std::max(internal_state->sizeInfo.buildScratchSize, internal_state->sizeInfo.updateScratchSize);
+		bufferInfo.size = align(internal_state->sizeInfo.accelerationStructureSize, scratch_alignment) + std::max(internal_state->sizeInfo.buildScratchSize, internal_state->sizeInfo.updateScratchSize);
 		bufferInfo.usage = VK_BUFFER_USAGE_ACCELERATION_STRUCTURE_STORAGE_BIT_KHR;
 		bufferInfo.usage |= VK_BUFFER_USAGE_STORAGE_BUFFER_BIT; // scratch
 		bufferInfo.usage |= VK_BUFFER_USAGE_SHADER_DEVICE_ADDRESS_BIT;
@@ -5476,10 +5480,11 @@ using namespace vulkan_internal;
 		VmaAllocationCreateInfo allocInfo = {};
 		allocInfo.usage = VMA_MEMORY_USAGE_GPU_ONLY;
 
-		vulkan_check(vmaCreateBuffer(
+		vulkan_check(vmaCreateBufferWithAlignment(
 			allocationhandler->allocator,
 			&bufferInfo,
 			&allocInfo,
+			scratch_alignment,
 			&internal_state->buffer,
 			&internal_state->allocation,
 			nullptr
@@ -5508,8 +5513,9 @@ using namespace vulkan_internal;
 		VkBufferDeviceAddressInfo addressinfo = {};
 		addressinfo.sType = VK_STRUCTURE_TYPE_BUFFER_DEVICE_ADDRESS_INFO;
 		addressinfo.buffer = internal_state->buffer;
-		internal_state->scratch_address = align(vkGetBufferDeviceAddress(device, &addressinfo) + internal_state->sizeInfo.accelerationStructureSize, (VkDeviceAddress)acceleration_structure_properties.minAccelerationStructureScratchOffsetAlignment);
-
+		const VkDeviceAddress buffer_address = vkGetBufferDeviceAddress(device, &addressinfo);
+		assert(buffer_address % scratch_alignment == 0);
+		internal_state->scratch_address = buffer_address + align(internal_state->sizeInfo.accelerationStructureSize, scratch_alignment);
 		if (desc->type == RaytracingAccelerationStructureDesc::Type::TOPLEVEL)
 		{
 			internal_state->index = allocationhandler->bindlessAccelerationStructures.allocate();
