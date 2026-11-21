@@ -37,6 +37,7 @@
     <None Include="$(MSBuildThisFileDirectory)objectHF.hlsli" />
     <None Include="$(MSBuildThisFileDirectory)objectHF_mesh_shading.hlsli" />
     <None Include="$(MSBuildThisFileDirectory)objectHF_tessellation.hlsli" />
+    <None Include="$(MSBuildThisFileDirectory)oceanHF.hlsli" />
     <None Include="$(MSBuildThisFileDirectory)oceanSurfaceHF.hlsli" />
     <None Include="$(MSBuildThisFileDirectory)PixelPacking_R11G11B10.hlsli" />
     <None Include="$(MSBuildThisFileDirectory)PixelPacking_RGBE.hlsli" />
@@ -354,6 +355,8 @@
       <ShaderType Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">Pixel</ShaderType>
     </FxCompile>
     <FxCompile Include="$(MSBuildThisFileDirectory)oceanSurfacePS_envmap.hlsl" />
+    <FxCompile Include="$(MSBuildThisFileDirectory)oceanSurfacePS_envmap_exclusion.hlsl" />
+    <FxCompile Include="$(MSBuildThisFileDirectory)oceanSurfacePS_exclusion.hlsl" />
     <FxCompile Include="$(MSBuildThisFileDirectory)oceanSurfacePS_shadowmap.hlsl" />
     <FxCompile Include="$(MSBuildThisFileDirectory)paintdecalPS.hlsl">
       <ShaderType Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">Pixel</ShaderType>

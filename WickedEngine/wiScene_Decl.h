@@ -17,6 +17,7 @@ namespace wi::scene
 	struct CameraComponent;
 	struct EnvironmentProbeComponent;
 	struct ForceFieldComponent;
+	struct OceanExclusionComponent;
 	struct DecalComponent;
 	struct AnimationComponent;
 	struct AnimationDataComponent;

@@ -66,6 +66,7 @@ namespace wi::lua::scene
 		int Component_CreateRigidBodyPhysics(lua_State* L);
 		int Component_CreateSoftBodyPhysics(lua_State* L);
 		int Component_CreateForceField(lua_State* L);
+		int Component_CreateOceanExclusion(lua_State* L);
 		int Component_CreateWeather(lua_State* L);
 		int Component_CreateSound(lua_State* L);
 		int Component_CreateVideo(lua_State* L);
@@ -96,6 +97,7 @@ namespace wi::lua::scene
 		int Component_GetRigidBodyPhysics(lua_State* L);
 		int Component_GetSoftBodyPhysics(lua_State* L);
 		int Component_GetForceField(lua_State* L);
+		int Component_GetOceanExclusion(lua_State* L);
 		int Component_GetWeather(lua_State* L);
 		int Component_GetSound(lua_State* L);
 		int Component_GetVideo(lua_State* L);
@@ -126,6 +128,7 @@ namespace wi::lua::scene
 		int Component_GetRigidBodyPhysicsArray(lua_State* L);
 		int Component_GetSoftBodyPhysicsArray(lua_State* L);
 		int Component_GetForceFieldArray(lua_State* L);
+		int Component_GetOceanExclusionArray(lua_State* L);
 		int Component_GetWeatherArray(lua_State* L);
 		int Component_GetSoundArray(lua_State* L);
 		int Component_GetVideoArray(lua_State* L);
@@ -157,6 +160,7 @@ namespace wi::lua::scene
 		int Entity_GetRigidBodyPhysicsArray(lua_State* L);
 		int Entity_GetSoftBodyPhysicsArray(lua_State* L);
 		int Entity_GetForceFieldArray(lua_State* L);
+		int Entity_GetOceanExclusionArray(lua_State* L);
 		int Entity_GetWeatherArray(lua_State* L);
 		int Entity_GetSoundArray(lua_State* L);
 		int Entity_GetVideoArray(lua_State* L);
@@ -188,6 +192,7 @@ namespace wi::lua::scene
 		int Component_RemoveRigidBodyPhysics(lua_State* L);
 		int Component_RemoveSoftBodyPhysics(lua_State* L);
 		int Component_RemoveForceField(lua_State* L);
+		int Component_RemoveOceanExclusion(lua_State* L);
 		int Component_RemoveWeather(lua_State* L);
 		int Component_RemoveSound(lua_State* L);
 		int Component_RemoveVideo(lua_State* L);
@@ -213,6 +218,9 @@ namespace wi::lua::scene
 		int RetargetAnimation(lua_State* L);
 		int ResetPose(lua_State* L);
 		int GetOceanPosAt(lua_State* L);
+		int IsOceanExcludedAt(lua_State* L);
+		int SetOceanExclusionPolygonFromSpline(lua_State* L);
+		int IsUnderOcean(lua_State* L);
 
 		int VoxelizeObject(lua_State* L);
 		int VoxelizeScene(lua_State* L);
@@ -1156,6 +1164,31 @@ namespace wi::lua::scene
 		PropertyFunction(Type)
 		PropertyFunction(Gravity)
 		PropertyFunction(Range)
+	};
+
+	class OceanExclusionComponent_BindLua
+	{
+	private:
+		wi::scene::OceanExclusionComponent owning;
+		wi::scene::Scene* scene = nullptr;
+		wi::ecs::Entity entity = wi::ecs::INVALID_ENTITY;
+		wi::scene::OceanExclusionComponent* Resolve(lua_State* L);
+	public:
+		inline static constexpr char className[] = "OceanExclusionComponent";
+		static Luna<OceanExclusionComponent_BindLua>::FunctionType methods[];
+		static Luna<OceanExclusionComponent_BindLua>::PropertyType properties[];
+
+		OceanExclusionComponent_BindLua(wi::scene::Scene* scene, wi::ecs::Entity entity) : scene(scene), entity(entity) {}
+		OceanExclusionComponent_BindLua(lua_State* L) {}
+
+		int GetShape(lua_State* L);
+		int SetShape(lua_State* L);
+		int SetDisabled(lua_State* L);
+		int IsDisabled(lua_State* L);
+		int SetPolygon(lua_State* L);
+		int GetPolygon(lua_State* L);
+		int SetPolygonFromWorldPoints(lua_State* L);
+		int Contains(lua_State* L);
 	};
 
 	class Weather_OceanParams_BindLua

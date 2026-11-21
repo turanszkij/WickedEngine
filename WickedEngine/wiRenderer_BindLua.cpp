@@ -125,6 +125,19 @@ namespace wi::lua::renderer
 		}
 		return 0;
 	}
+	int SetDebugOceanExclusionsEnabled(lua_State* L)
+	{
+		int argc = wi::lua::SGetArgCount(L);
+		if (argc > 0)
+		{
+			wi::renderer::SetToDrawDebugOceanExclusions(wi::lua::SGetBool(L, 1));
+		}
+		else
+		{
+			wi::lua::SError(L, "SetDebugOceanExclusionsEnabled(bool enabled) not enough arguments!");
+		}
+		return 0;
+	}
 	int SetDebugForceFieldsEnabled(lua_State* L)
 	{
 		int argc = wi::lua::SGetArgCount(L);
@@ -1076,6 +1089,7 @@ namespace wi::lua::renderer
 			wi::lua::RegisterFunc("SetDebugEmittersEnabled", SetDebugEmittersEnabled);
 			wi::lua::RegisterFunc("SetDebugEnvProbesEnabled", SetDebugEnvProbesEnabled);
 			wi::lua::RegisterFunc("SetDebugForceFieldsEnabled", SetDebugForceFieldsEnabled);
+			wi::lua::RegisterFunc("SetDebugOceanExclusionsEnabled", SetDebugOceanExclusionsEnabled);
 			wi::lua::RegisterFunc("SetDebugCamerasEnabled", SetDebugCamerasEnabled);
 			wi::lua::RegisterFunc("SetDebugCollidersEnabled", SetDebugCollidersEnabled);
 			wi::lua::RegisterFunc("SetGridHelperEnabled", SetGridHelperEnabled);

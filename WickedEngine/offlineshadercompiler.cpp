@@ -237,6 +237,8 @@ wi::vector<ShaderEntry> shaders = {
 	{"emittedparticlePS_soft_lighting", wi::graphics::ShaderStage::PS },
 	{"oceanSurfacePS", wi::graphics::ShaderStage::PS },
 	{"oceanSurfacePS_envmap", wi::graphics::ShaderStage::PS },
+	{"oceanSurfacePS_exclusion", wi::graphics::ShaderStage::PS },
+	{"oceanSurfacePS_envmap_exclusion", wi::graphics::ShaderStage::PS },
 	{"oceanSurfacePS_shadowmap", wi::graphics::ShaderStage::PS },
 	{"hairparticlePS", wi::graphics::ShaderStage::PS },
 	{"hairparticlePS_simple", wi::graphics::ShaderStage::PS },

@@ -10,6 +10,7 @@
 #include "EmitterWindow.h"
 #include "HairParticleWindow.h"
 #include "ForceFieldWindow.h"
+#include "OceanExclusionWindow.h"
 #include "SoundWindow.h"
 #include "VideoWindow.h"
 #include "SpringWindow.h"
@@ -58,6 +59,7 @@ public:
 	EmitterWindow emitterWnd;
 	HairParticleWindow hairWnd;
 	ForceFieldWindow forceFieldWnd;
+	OceanExclusionWindow oceanExclusionWnd;
 	SoundWindow soundWnd;
 	VideoWindow videoWnd;
 	SpringWindow springWnd;
@@ -118,6 +120,7 @@ public:
 		Constraint = 1ull << 30ull,
 		Spline = 1ull << 31ull,
 		GaussianSplat = 1ull << 32ull,
+		OceanExclusion = 1ull << 33ull,
 
 		All = ~0ull,
 	} filter = Filter::All;

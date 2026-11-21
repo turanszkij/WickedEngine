@@ -1437,6 +1437,25 @@ namespace wi::scene
 			}
 		}
 	}
+	void OceanExclusionComponent::Serialize(wi::Archive& archive, EntitySerializer& seri)
+	{
+		if (archive.IsReadMode())
+		{
+			archive >> _flags;
+			uint32_t value;
+			archive >> value;
+			shape = (Shape)value;
+			archive >> polygon;
+			// The deserializer doesn't know the entity's final world transform yet.
+			aabb = {};
+		}
+		else
+		{
+			archive << _flags;
+			archive << (uint32_t)shape;
+			archive << polygon;
+		}
+	}
 	void ForceFieldComponent::Serialize(wi::Archive& archive, EntitySerializer& seri)
 	{
 		if (archive.IsReadMode())

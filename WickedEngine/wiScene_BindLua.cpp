@@ -464,6 +464,13 @@ RigidBodyShape = {
 	TriangleMesh = 4,
 }
 
+OceanExclusionShape = {
+	Box = 0,
+	Sphere = 1,
+	Cylinder = 2,
+	Polygon = 3,
+}
+
 MetadataPreset = {
 	Custom = 0,
 	Waypoint = 1,
@@ -514,6 +521,7 @@ void Bind()
 		Luna<RigidBodyPhysicsComponent_BindLua>::Register(L);
 		Luna<SoftBodyPhysicsComponent_BindLua>::Register(L);
 		Luna<ForceFieldComponent_BindLua>::Register(L);
+		Luna<OceanExclusionComponent_BindLua>::Register(L);
 		Luna<Weather_OceanParams_BindLua>::Register(L);
 		Luna<Weather_AtmosphereParams_BindLua>::Register(L);
 		Luna<Weather_VolumetricCloudParams_BindLua>::Register(L);
@@ -563,6 +571,7 @@ Luna<Scene_BindLua>::FunctionType Scene_BindLua::methods[] = {
 	lunamethod(Scene_BindLua, Component_CreateRigidBodyPhysics),
 	lunamethod(Scene_BindLua, Component_CreateSoftBodyPhysics),
 	lunamethod(Scene_BindLua, Component_CreateForceField),
+	lunamethod(Scene_BindLua, Component_CreateOceanExclusion),
 	lunamethod(Scene_BindLua, Component_CreateWeather),
 	lunamethod(Scene_BindLua, Component_CreateSound),
 	lunamethod(Scene_BindLua, Component_CreateVideo),
@@ -593,6 +602,7 @@ Luna<Scene_BindLua>::FunctionType Scene_BindLua::methods[] = {
 	lunamethod(Scene_BindLua, Component_GetRigidBodyPhysics),
 	lunamethod(Scene_BindLua, Component_GetSoftBodyPhysics),
 	lunamethod(Scene_BindLua, Component_GetForceField),
+	lunamethod(Scene_BindLua, Component_GetOceanExclusion),
 	lunamethod(Scene_BindLua, Component_GetWeather),
 	lunamethod(Scene_BindLua, Component_GetSound),
 	lunamethod(Scene_BindLua, Component_GetVideo),
@@ -623,6 +633,7 @@ Luna<Scene_BindLua>::FunctionType Scene_BindLua::methods[] = {
 	lunamethod(Scene_BindLua, Component_GetRigidBodyPhysicsArray),
 	lunamethod(Scene_BindLua, Component_GetSoftBodyPhysicsArray),
 	lunamethod(Scene_BindLua, Component_GetForceFieldArray),
+	lunamethod(Scene_BindLua, Component_GetOceanExclusionArray),
 	lunamethod(Scene_BindLua, Component_GetWeatherArray),
 	lunamethod(Scene_BindLua, Component_GetSoundArray),
 	lunamethod(Scene_BindLua, Component_GetVideoArray),
@@ -654,6 +665,7 @@ Luna<Scene_BindLua>::FunctionType Scene_BindLua::methods[] = {
 	lunamethod(Scene_BindLua, Entity_GetRigidBodyPhysicsArray),
 	lunamethod(Scene_BindLua, Entity_GetSoftBodyPhysicsArray),
 	lunamethod(Scene_BindLua, Entity_GetForceFieldArray),
+	lunamethod(Scene_BindLua, Entity_GetOceanExclusionArray),
 	lunamethod(Scene_BindLua, Entity_GetWeatherArray),
 	lunamethod(Scene_BindLua, Entity_GetSoundArray),
 	lunamethod(Scene_BindLua, Entity_GetVideoArray),
@@ -684,6 +696,7 @@ Luna<Scene_BindLua>::FunctionType Scene_BindLua::methods[] = {
 	lunamethod(Scene_BindLua, Component_RemoveRigidBodyPhysics),
 	lunamethod(Scene_BindLua, Component_RemoveSoftBodyPhysics),
 	lunamethod(Scene_BindLua, Component_RemoveForceField),
+	lunamethod(Scene_BindLua, Component_RemoveOceanExclusion),
 	lunamethod(Scene_BindLua, Component_RemoveWeather),
 	lunamethod(Scene_BindLua, Component_RemoveSound),
 	lunamethod(Scene_BindLua, Component_RemoveVideo),
@@ -707,6 +720,9 @@ Luna<Scene_BindLua>::FunctionType Scene_BindLua::methods[] = {
 	lunamethod(Scene_BindLua, RetargetAnimation),
 	lunamethod(Scene_BindLua, ResetPose),
 	lunamethod(Scene_BindLua, GetOceanPosAt),
+	lunamethod(Scene_BindLua, IsOceanExcludedAt),
+	lunamethod(Scene_BindLua, IsUnderOcean),
+	lunamethod(Scene_BindLua, SetOceanExclusionPolygonFromSpline),
 	lunamethod(Scene_BindLua, VoxelizeObject),
 	lunamethod(Scene_BindLua, VoxelizeScene),
 
@@ -1367,6 +1383,26 @@ int Scene_BindLua::Component_CreateSoftBodyPhysics(lua_State* L)
 	}
 	return 0;
 }
+int Scene_BindLua::Component_CreateOceanExclusion(lua_State* L)
+{
+	const Entity entity = wi::lua::SGetArgCount(L) > 0 ? (Entity)wi::lua::SGetLongLong(L, 1) : INVALID_ENTITY;
+	if (entity == INVALID_ENTITY)
+	{
+		wi::lua::SError(L, "Component_CreateOceanExclusion(Entity entity) expects a valid entity!");
+		return 0;
+	}
+	if (scene->ocean_exclusions.Contains(entity))
+	{
+		wi::lua::SError(L, "Component_CreateOceanExclusion(Entity entity) entity already has an exclusion!");
+		return 0;
+	}
+	OceanExclusionComponent& component = scene->ocean_exclusions.Create(entity);
+	XMFLOAT4X4 world;
+	XMStoreFloat4x4(&world, scene->ComputeEntityMatrixRecursive(entity));
+	component.UpdateTransform(world);
+	Luna<OceanExclusionComponent_BindLua>::push(L, scene, entity);
+	return 1;
+}
 int Scene_BindLua::Component_CreateForceField(lua_State* L)
 {
 	int argc = wi::lua::SGetArgCount(L);
@@ -1941,6 +1977,28 @@ int Scene_BindLua::Component_GetSoftBodyPhysics(lua_State* L)
 	}
 	return 0;
 }
+int Scene_BindLua::Component_GetOceanExclusion(lua_State* L)
+{
+	int argc = wi::lua::SGetArgCount(L);
+	if (argc > 0)
+	{
+		Entity entity = (Entity)wi::lua::SGetLongLong(L, 1);
+
+		OceanExclusionComponent* component = scene->ocean_exclusions.GetComponent(entity);
+		if (component == nullptr)
+		{
+			return 0;
+		}
+
+		Luna<OceanExclusionComponent_BindLua>::push(L, scene, entity);
+		return 1;
+	}
+	else
+	{
+		wi::lua::SError(L, "Scene::Component_GetOceanExclusion(Entity entity) not enough arguments!");
+	}
+	return 0;
+}
 int Scene_BindLua::Component_GetForceField(lua_State* L)
 {
 	int argc = wi::lua::SGetArgCount(L);
@@ -2404,6 +2462,17 @@ int Scene_BindLua::Component_GetSoftBodyPhysicsArray(lua_State* L)
 	}
 	return 1;
 }
+int Scene_BindLua::Component_GetOceanExclusionArray(lua_State* L)
+{
+	lua_createtable(L, (int)scene->ocean_exclusions.GetCount(), 0);
+	int newTable = lua_gettop(L);
+	for (size_t i = 0; i < scene->ocean_exclusions.GetCount(); ++i)
+	{
+		Luna<OceanExclusionComponent_BindLua>::push(L, scene, scene->ocean_exclusions.GetEntity(i));
+		lua_rawseti(L, newTable, lua_Integer(i + 1));
+	}
+	return 1;
+}
 int Scene_BindLua::Component_GetForceFieldArray(lua_State* L)
 {
 	lua_createtable(L, (int)scene->forces.GetCount(), 0);
@@ -2731,6 +2800,17 @@ int Scene_BindLua::Entity_GetSoftBodyPhysicsArray(lua_State* L)
 	for (size_t i = 0; i < scene->softbodies.GetCount(); ++i)
 	{
 		wi::lua::SSetLongLong(L, scene->softbodies.GetEntity(i));
+		lua_rawseti(L, newTable, lua_Integer(i + 1));
+	}
+	return 1;
+}
+int Scene_BindLua::Entity_GetOceanExclusionArray(lua_State* L)
+{
+	lua_createtable(L, (int)scene->ocean_exclusions.GetCount(), 0);
+	int newTable = lua_gettop(L);
+	for (size_t i = 0; i < scene->ocean_exclusions.GetCount(); ++i)
+	{
+		wi::lua::SSetLongLong(L, scene->ocean_exclusions.GetEntity(i));
 		lua_rawseti(L, newTable, lua_Integer(i + 1));
 	}
 	return 1;
@@ -3168,6 +3248,23 @@ int Scene_BindLua::Component_RemoveSoftBodyPhysics(lua_State* L)
 	}
 	return 0;
 }
+int Scene_BindLua::Component_RemoveOceanExclusion(lua_State* L)
+{
+	int argc = wi::lua::SGetArgCount(L);
+	if (argc > 0)
+	{
+		Entity entity = (Entity)wi::lua::SGetLongLong(L, 1);
+		if (scene->ocean_exclusions.Contains(entity))
+		{
+			scene->ocean_exclusions.Remove(entity);
+		}
+	}
+	else
+	{
+		wi::lua::SError(L, "Scene::Component_RemoveOceanExclusion(Entity entity) not enough arguments!");
+	}
+	return 0;
+}
 int Scene_BindLua::Component_RemoveForceField(lua_State* L)
 {
 	int argc = wi::lua::SGetArgCount(L);
@@ -3519,6 +3616,67 @@ int Scene_BindLua::ResetPose(lua_State* L)
 	else
 	{
 		wi::lua::SError(L, "ResetPose(Entity entity) not enough arguments!");
+	}
+	return 0;
+}
+int Scene_BindLua::IsOceanExcludedAt(lua_State* L)
+{
+	int argc = wi::lua::SGetArgCount(L);
+	if (argc > 0)
+	{
+		Vector_BindLua* v = Luna<Vector_BindLua>::lightcheck(L, 1);
+		if (v == nullptr)
+		{
+			wi::lua::SError(L, "IsOceanExcludedAt(Vector worldPos) first argument is not a Vector!");
+			return 0;
+		}
+		wi::lua::SSetBool(L, scene->IsOceanExcludedAt(v->GetFloat3()));
+		return 1;
+	}
+	else
+	{
+		wi::lua::SError(L, "IsOceanExcludedAt(Vector worldPos) not enough arguments!");
+	}
+	return 0;
+}
+int Scene_BindLua::IsUnderOcean(lua_State* L)
+{
+	int argc = wi::lua::SGetArgCount(L);
+	if (argc > 0)
+	{
+		Vector_BindLua* v = Luna<Vector_BindLua>::lightcheck(L, 1);
+		if (v == nullptr)
+		{
+			wi::lua::SError(L, "IsUnderOcean(Vector worldPos) first argument is not a Vector!");
+			return 0;
+		}
+		wi::lua::SSetBool(L, scene->IsUnderOcean(v->GetFloat3()));
+		return 1;
+	}
+	else
+	{
+		wi::lua::SError(L, "IsUnderOcean(Vector worldPos) not enough arguments!");
+	}
+	return 0;
+}
+int Scene_BindLua::SetOceanExclusionPolygonFromSpline(lua_State* L)
+{
+	int argc = wi::lua::SGetArgCount(L);
+	if (argc > 1)
+	{
+		Entity exclusion_entity = (Entity)wi::lua::SGetLongLong(L, 1);
+		Entity spline_entity = (Entity)wi::lua::SGetLongLong(L, 2);
+		int subdivision = 8;
+		if (argc > 2)
+		{
+			subdivision = wi::lua::SGetInt(L, 3);
+		}
+		wi::lua::SSetBool(L, scene->SetOceanExclusionPolygonFromSpline(exclusion_entity, spline_entity, subdivision));
+		return 1;
+	}
+	else
+	{
+		wi::lua::SError(L, "SetOceanExclusionPolygonFromSpline(Entity exclusionEntity, Entity splineEntity, opt int subdivision = 8) not enough arguments!");
 	}
 	return 0;
 }
@@ -6687,6 +6845,204 @@ int SoftBodyPhysicsComponent_BindLua::CreateFromMesh(lua_State *L)
 		component->CreateFromMesh(*mesh->component);
 	}
 	return 0;
+}
+
+
+
+
+
+
+
+Luna<OceanExclusionComponent_BindLua>::FunctionType OceanExclusionComponent_BindLua::methods[] = {
+	lunamethod(OceanExclusionComponent_BindLua, SetDisabled),
+	lunamethod(OceanExclusionComponent_BindLua, IsDisabled),
+	lunamethod(OceanExclusionComponent_BindLua, SetPolygon),
+	lunamethod(OceanExclusionComponent_BindLua, GetPolygon),
+	lunamethod(OceanExclusionComponent_BindLua, SetPolygonFromWorldPoints),
+	lunamethod(OceanExclusionComponent_BindLua, Contains),
+	{ NULL, NULL }
+};
+Luna<OceanExclusionComponent_BindLua>::PropertyType OceanExclusionComponent_BindLua::properties[] = {
+	lunaproperty(OceanExclusionComponent_BindLua, Shape),
+	{ NULL, NULL }
+};
+
+OceanExclusionComponent* OceanExclusionComponent_BindLua::Resolve(lua_State* L)
+{
+	// Store an entity, not a pointer into the component array (which can move).
+	OceanExclusionComponent* component = scene == nullptr ? &owning : scene->ocean_exclusions.GetComponent(entity);
+	if (component == nullptr)
+	{
+		wi::lua::SError(L, "OceanExclusionComponent no longer exists on this entity!");
+	}
+	return component;
+}
+int OceanExclusionComponent_BindLua::GetShape(lua_State* L)
+{
+	const OceanExclusionComponent* component = Resolve(L);
+	if (component == nullptr)
+	{
+		return 0;
+	}
+	wi::lua::SSetInt(L, int(component->shape));
+	return 1;
+}
+int OceanExclusionComponent_BindLua::SetShape(lua_State* L)
+{
+	OceanExclusionComponent* component = Resolve(L);
+	if (component == nullptr)
+	{
+		return 0;
+	}
+	int valid = 0;
+	const lua_Integer shape = lua_tointegerx(L, 1, &valid);
+	if (!valid || shape < int(OceanExclusionComponent::Shape::Box) || shape > int(OceanExclusionComponent::Shape::Polygon))
+	{
+		wi::lua::SError(L, "OceanExclusionComponent.Shape expects a value from OceanExclusionShape!");
+		return 0;
+	}
+	component->shape = OceanExclusionComponent::Shape(shape);
+	component->UpdateTransform(component->world);
+	return 0;
+}
+int OceanExclusionComponent_BindLua::SetDisabled(lua_State* L)
+{
+	OceanExclusionComponent* component = Resolve(L);
+	if (component != nullptr)
+	{
+		component->SetDisabled(wi::lua::SGetArgCount(L) == 0 || wi::lua::SGetBool(L, 1));
+	}
+	return 0;
+}
+int OceanExclusionComponent_BindLua::IsDisabled(lua_State* L)
+{
+	const OceanExclusionComponent* component = Resolve(L);
+	if (component == nullptr)
+	{
+		return 0;
+	}
+	wi::lua::SSetBool(L, component->IsDisabled());
+	return 1;
+}
+// Read a dense array before making any changes to the component.
+static bool OceanExclusion_GetVectorTable(lua_State* L, wi::vector<XMFLOAT4>& values)
+{
+	if (!lua_istable(L, 1))
+	{
+		return false;
+	}
+	const size_t count = (size_t)lua_rawlen(L, 1);
+	if (count < 3 || count > OceanExclusionComponent::max_polygon_points)
+	{
+		return false;
+	}
+	values.reserve(count);
+	for (size_t i = 1; i <= count; ++i)
+	{
+		lua_rawgeti(L, 1, lua_Integer(i));
+		Vector_BindLua* v = Luna<Vector_BindLua>::lightcheck(L, -1);
+		lua_pop(L, 1);
+		if (v == nullptr)
+		{
+			return false;
+		}
+		values.push_back(v->data);
+	}
+	return true;
+}
+int OceanExclusionComponent_BindLua::SetPolygon(lua_State* L)
+{
+	OceanExclusionComponent* component = Resolve(L);
+	if (component == nullptr)
+	{
+		return 0;
+	}
+	wi::vector<XMFLOAT4> values;
+	if (!OceanExclusion_GetVectorTable(L, values))
+	{
+		wi::lua::SError(L, "SetPolygon(table points) expects 3–4096 Vectors!");
+		return 0;
+	}
+	wi::vector<XMFLOAT2> outline;
+	outline.reserve(values.size());
+	for (const XMFLOAT4& value : values)
+	{
+		outline.emplace_back(value.x, value.y); // Vector(x, z)
+	}
+	if (!component->SetPolygon(std::move(outline)))
+	{
+		wi::lua::SError(L, "SetPolygon(table points) expects a finite outline with area on the local XZ plane!");
+	}
+	return 0;
+}
+int OceanExclusionComponent_BindLua::GetPolygon(lua_State* L)
+{
+	const OceanExclusionComponent* component = Resolve(L);
+	if (component == nullptr)
+	{
+		return 0;
+	}
+	lua_createtable(L, (int)component->polygon.size(), 0);
+	int newTable = lua_gettop(L);
+	for (size_t i = 0; i < component->polygon.size(); ++i)
+	{
+		Luna<Vector_BindLua>::push(L, XMFLOAT4(component->polygon[i].x, component->polygon[i].y, 0, 0));
+		lua_rawseti(L, newTable, lua_Integer(i + 1));
+	}
+	return 1;
+}
+int OceanExclusionComponent_BindLua::SetPolygonFromWorldPoints(lua_State* L)
+{
+	OceanExclusionComponent* component = Resolve(L);
+	if (component == nullptr)
+	{
+		return 0;
+	}
+	wi::vector<XMFLOAT4> values;
+	if (!OceanExclusion_GetVectorTable(L, values))
+	{
+		wi::lua::SError(L, "SetPolygonFromWorldPoints(table points) expects 3–4096 Vectors!");
+		return 0;
+	}
+	wi::vector<XMFLOAT3> points;
+	points.reserve(values.size());
+	for (const XMFLOAT4& value : values)
+	{
+		points.emplace_back(value.x, value.y, value.z);
+	}
+	OceanExclusionComponent candidate;
+	candidate._flags = component->_flags;
+	if (scene != nullptr)
+	{
+		XMFLOAT4X4 world;
+		XMStoreFloat4x4(&world, scene->ComputeEntityMatrixRecursive(entity));
+		candidate.UpdateTransform(world);
+	}
+	if (candidate.SetPolygonFromWorldPoints(points.data(), points.size()))
+	{
+		*component = std::move(candidate);
+	}
+	else
+	{
+		wi::lua::SError(L, "SetPolygonFromWorldPoints(table points) found an invalid outline or transform!");
+	}
+	return 0;
+}
+int OceanExclusionComponent_BindLua::Contains(lua_State* L)
+{
+	const OceanExclusionComponent* component = Resolve(L);
+	if (component == nullptr)
+	{
+		return 0;
+	}
+	Vector_BindLua* v = Luna<Vector_BindLua>::lightcheck(L, 1);
+	if (v == nullptr)
+	{
+		wi::lua::SError(L, "Contains(Vector worldPos) expects a Vector!");
+		return 0;
+	}
+	wi::lua::SSetBool(L, component->Contains(v->GetFloat3()));
+	return 1;
 }
 
 

@@ -113,6 +113,7 @@ bool debugEmitters = false;
 bool freezeCullingCamera = false;
 bool debugEnvProbes = false;
 bool debugForceFields = false;
+bool debugOceanExclusions = false;
 bool debugCameras = false;
 bool debugColliders = false;
 bool debugSprings = false;
@@ -7369,7 +7370,7 @@ void DrawScene(
 	{
 		if (!GetOcclusionCullingEnabled() || !vis.scene->ocean.IsOccluded())
 		{
-			vis.scene->ocean.Render(*vis.camera, cmd);
+			vis.scene->ocean.Render(*vis.camera, cmd, vis.scene->oceanExclusionCount > 0);
 		}
 	}
 
@@ -7479,6 +7480,89 @@ void DrawDebugWorld(
 		renderableTrails.clear();
 		return;
 	}
+
+	if (debugOceanExclusions)
+	{
+		// The ocean exclusion volumes are added to the debug lines and boxes that will be drawn below:
+		static constexpr int circle_segments = 32;
+		static constexpr size_t max_polygon_posts = 64;
+		for (size_t i = 0; i < scene.ocean_exclusions.GetCount(); ++i)
+		{
+			const OceanExclusionComponent& exclusion = scene.ocean_exclusions[i];
+			if (!exclusion.valid_transform)
+			{
+				continue;
+			}
+			const XMFLOAT4 color = !exclusion.IsActive() ? XMFLOAT4(0.5f, 0.5f, 0.5f, 1) : XMFLOAT4(0.2f, 0.8f, 1.0f, 1);
+			const XMMATRIX W = XMLoadFloat4x4(&exclusion.world);
+			// A line between two points that are given in the local space of the volume:
+			const auto draw_line = [&](const XMFLOAT3& a, const XMFLOAT3& b) {
+				RenderableLine line;
+				XMStoreFloat3(&line.start, XMVector3Transform(XMLoadFloat3(&a), W));
+				XMStoreFloat3(&line.end, XMVector3Transform(XMLoadFloat3(&b), W));
+				line.color_start = color;
+				line.color_end = color;
+				DrawLine(line);
+			};
+			// A circle with radius 1 on a plane of the local space: axis0 and axis1 are the two axes that span the plane
+			const auto draw_circle = [&](const XMFLOAT3& axis0, const XMFLOAT3& axis1, const XMFLOAT3& center) {
+				for (int segment = 0; segment < circle_segments; ++segment)
+				{
+					const float angle0 = XM_2PI * float(segment) / float(circle_segments);
+					const float angle1 = XM_2PI * float(segment + 1) / float(circle_segments);
+					const float c0 = std::cos(angle0), s0 = std::sin(angle0);
+					const float c1 = std::cos(angle1), s1 = std::sin(angle1);
+					draw_line(
+						XMFLOAT3(center.x + axis0.x * c0 + axis1.x * s0, center.y + axis0.y * c0 + axis1.y * s0, center.z + axis0.z * c0 + axis1.z * s0),
+						XMFLOAT3(center.x + axis0.x * c1 + axis1.x * s1, center.y + axis0.y * c1 + axis1.y * s1, center.z + axis0.z * c1 + axis1.z * s1)
+					);
+				}
+			};
+			switch (exclusion.shape)
+			{
+			default:
+			case OceanExclusionComponent::Shape::Box:
+				DrawBox(exclusion.world, color);
+				break;
+			case OceanExclusionComponent::Shape::Sphere:
+				draw_circle(XMFLOAT3(1, 0, 0), XMFLOAT3(0, 1, 0), XMFLOAT3(0, 0, 0));
+				draw_circle(XMFLOAT3(1, 0, 0), XMFLOAT3(0, 0, 1), XMFLOAT3(0, 0, 0));
+				draw_circle(XMFLOAT3(0, 1, 0), XMFLOAT3(0, 0, 1), XMFLOAT3(0, 0, 0));
+				break;
+			case OceanExclusionComponent::Shape::Cylinder:
+				draw_circle(XMFLOAT3(1, 0, 0), XMFLOAT3(0, 0, 1), XMFLOAT3(0, 1, 0));
+				draw_circle(XMFLOAT3(1, 0, 0), XMFLOAT3(0, 0, 1), XMFLOAT3(0, -1, 0));
+				draw_line(XMFLOAT3(1, -1, 0), XMFLOAT3(1, 1, 0));
+				draw_line(XMFLOAT3(-1, -1, 0), XMFLOAT3(-1, 1, 0));
+				draw_line(XMFLOAT3(0, -1, 1), XMFLOAT3(0, 1, 1));
+				draw_line(XMFLOAT3(0, -1, -1), XMFLOAT3(0, 1, -1));
+				break;
+			case OceanExclusionComponent::Shape::Polygon:
+				{
+					const size_t count = exclusion.polygon.size();
+					if (exclusion.aabb._min.x > exclusion.aabb._max.x)
+					{
+						break;
+					}
+					// The posts between the two outlines are thinned out for an outline of many points:
+					const size_t post_step = std::max(size_t(1), count / max_polygon_posts);
+					for (size_t point = 0; point < count; ++point)
+					{
+						const XMFLOAT2& a = exclusion.polygon[point];
+						const XMFLOAT2& b = exclusion.polygon[(point + 1) % count];
+						draw_line(XMFLOAT3(a.x, 1, a.y), XMFLOAT3(b.x, 1, b.y));
+						draw_line(XMFLOAT3(a.x, -1, a.y), XMFLOAT3(b.x, -1, b.y));
+						if (point % post_step == 0)
+						{
+							draw_line(XMFLOAT3(a.x, -1, a.y), XMFLOAT3(a.x, 1, a.y));
+						}
+					}
+				}
+				break;
+			}
+		}
+	}
+
 	static GPUBuffer wirecubeVB;
 	static GPUBuffer wirecubeIB;
 	if (!wirecubeVB.IsValid())
@@ -9639,7 +9723,7 @@ void RefreshEnvProbes(const Visibility& vis, CommandList cmd)
 		{
 			if (vis.scene->ocean.IsValid() && vis.scene->weather.IsOceanEnabled())
 			{
-				vis.scene->ocean.RenderForCubemap(cmd);
+				vis.scene->ocean.RenderForCubemap(cmd, vis.scene->oceanExclusionCount > 0);
 			}
 			if (!visible_gaussian_models.empty())
 			{
@@ -19589,6 +19673,8 @@ void SetToDrawDebugEmitters(bool param) { debugEmitters = param; }
 bool GetToDrawDebugEmitters() { return debugEmitters; }
 void SetToDrawDebugForceFields(bool param) { debugForceFields = param; }
 bool GetToDrawDebugForceFields() { return debugForceFields; }
+void SetToDrawDebugOceanExclusions(bool param) { debugOceanExclusions = param; }
+bool GetToDrawDebugOceanExclusions() { return debugOceanExclusions; }
 void SetToDrawDebugCameras(bool param) { debugCameras = param; }
 bool GetToDrawDebugCameras() { return debugCameras; }
 void SetToDrawDebugColliders(bool param) { debugColliders = param; }

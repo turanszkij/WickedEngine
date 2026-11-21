@@ -1228,6 +1228,8 @@ namespace wi::renderer
 	bool GetToDrawDebugEmitters();
 	void SetToDrawDebugForceFields(bool param);
 	bool GetToDrawDebugForceFields();
+	void SetToDrawDebugOceanExclusions(bool param);
+	bool GetToDrawDebugOceanExclusions();
 	void SetToDrawDebugCameras(bool param);
 	bool GetToDrawDebugCameras();
 	void SetToDrawDebugColliders(bool param);

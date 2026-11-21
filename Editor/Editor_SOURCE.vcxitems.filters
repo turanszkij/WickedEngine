@@ -8,6 +8,7 @@
     <ClCompile Include="$(MSBuildThisFileDirectory)EmitterWindow.cpp" />
     <ClCompile Include="$(MSBuildThisFileDirectory)EnvProbeWindow.cpp" />
     <ClCompile Include="$(MSBuildThisFileDirectory)ForceFieldWindow.cpp" />
+    <ClCompile Include="$(MSBuildThisFileDirectory)OceanExclusionWindow.cpp" />
     <ClCompile Include="$(MSBuildThisFileDirectory)HairParticleWindow.cpp" />
     <ClCompile Include="$(MSBuildThisFileDirectory)IKWindow.cpp" />
     <ClCompile Include="$(MSBuildThisFileDirectory)LayerWindow.cpp" />
@@ -67,6 +68,7 @@
     <ClInclude Include="$(MSBuildThisFileDirectory)EmitterWindow.h" />
     <ClInclude Include="$(MSBuildThisFileDirectory)EnvProbeWindow.h" />
     <ClInclude Include="$(MSBuildThisFileDirectory)ForceFieldWindow.h" />
+    <ClInclude Include="$(MSBuildThisFileDirectory)OceanExclusionWindow.h" />
     <ClInclude Include="$(MSBuildThisFileDirectory)HairParticleWindow.h" />
     <ClInclude Include="$(MSBuildThisFileDirectory)IKWindow.h" />
     <ClInclude Include="$(MSBuildThisFileDirectory)json.hpp" />

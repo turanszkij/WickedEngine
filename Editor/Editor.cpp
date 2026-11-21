@@ -686,6 +686,7 @@ void EditorComponent::Load()
 		NEW_DIRECTIONALLIGHT,
 		NEW_ENVIRONMENTPROBE,
 		NEW_FORCE,
+		NEW_OCEANEXCLUSION,
 		NEW_DECAL,
 		NEW_SOUND,
 		NEW_VIDEO,
@@ -723,6 +724,7 @@ void EditorComponent::Load()
 	newEntityCombo.AddItem("Directional Light " ICON_DIRECTIONALLIGHT, NEW_DIRECTIONALLIGHT);
 	newEntityCombo.AddItem("Environment Probe " ICON_ENVIRONMENTPROBE, NEW_ENVIRONMENTPROBE);
 	newEntityCombo.AddItem("Force " ICON_FORCE, NEW_FORCE);
+	newEntityCombo.AddItem("Ocean Exclusion " ICON_OCEANEXCLUSION, NEW_OCEANEXCLUSION);
 	newEntityCombo.AddItem("Decal " ICON_DECAL, NEW_DECAL);
 	newEntityCombo.AddItem("Sound " ICON_SOUND, NEW_SOUND);
 	newEntityCombo.AddItem("Video " ICON_VIDEO, NEW_VIDEO);
@@ -786,6 +788,9 @@ void EditorComponent::Load()
 		case NEW_ENVIRONMENTPROBE:
 			pick.entity = scene.Entity_CreateEnvironmentProbe("envprobe", in_front_of_camera);
 			break;
+		case NEW_OCEANEXCLUSION:
+			AddOceanExclusion((scene.weathers.GetCount() > 0 ? scene.weathers[0] : scene.weather).oceanParameters.waterHeight);
+			return;
 		case NEW_FORCE:
 			pick.entity = scene.Entity_CreateForce("force");
 			break;
@@ -1282,6 +1287,7 @@ void EditorComponent::Load()
 		cinema_mode_saved_debugColliders = wi::renderer::GetToDrawDebugColliders();
 		cinema_mode_saved_debugEmitters = wi::renderer::GetToDrawDebugEmitters();
 		cinema_mode_saved_debugForceFields = wi::renderer::GetToDrawDebugForceFields();
+		cinema_mode_saved_debugOceanExclusions = wi::renderer::GetToDrawDebugOceanExclusions();
 		cinema_mode_saved_debugBoneLines = wi::renderer::GetToDrawDebugBoneLines();
 		cinema_mode_saved_debugPartitionTree = wi::renderer::GetToDrawDebugPartitionTree();
 		cinema_mode_saved_debugSprings = wi::renderer::GetToDrawDebugSprings();
@@ -1292,6 +1298,7 @@ void EditorComponent::Load()
 		wi::renderer::SetToDrawDebugColliders(false);
 		wi::renderer::SetToDrawDebugEmitters(false);
 		wi::renderer::SetToDrawDebugForceFields(false);
+		wi::renderer::SetToDrawDebugOceanExclusions(false);
 		wi::renderer::SetToDrawDebugBoneLines(false);
 		wi::renderer::SetToDrawDebugPartitionTree(false);
 		wi::renderer::SetToDrawDebugSprings(false);
@@ -1771,6 +1778,7 @@ void EditorComponent::Update(float dt)
 			wi::renderer::SetToDrawDebugColliders(cinema_mode_saved_debugColliders);
 			wi::renderer::SetToDrawDebugEmitters(cinema_mode_saved_debugEmitters);
 			wi::renderer::SetToDrawDebugForceFields(cinema_mode_saved_debugForceFields);
+			wi::renderer::SetToDrawDebugOceanExclusions(cinema_mode_saved_debugOceanExclusions);
 			wi::renderer::SetToDrawDebugBoneLines(cinema_mode_saved_debugBoneLines);
 			wi::renderer::SetToDrawDebugPartitionTree(cinema_mode_saved_debugPartitionTree);
 			wi::renderer::SetToDrawDebugSprings(cinema_mode_saved_debugSprings);
@@ -2423,6 +2431,27 @@ void EditorComponent::Update(float dt)
 					Entity entity = scene.forces.GetEntity(i);
 					if (!scene.transforms.Contains(entity))
 						continue;
+					const TransformComponent& transform = *scene.transforms.GetComponent(entity);
+
+					XMVECTOR disV = XMVector3LinePointDistance(XMLoadFloat3(&pickRay.origin), XMLoadFloat3(&pickRay.origin) + XMLoadFloat3(&pickRay.direction), transform.GetPositionV());
+					float dis = XMVectorGetX(disV);
+					if (dist_check(dis, transform.GetPosition()))
+					{
+						hovered = wi::scene::PickResult();
+						hovered.entity = entity;
+						hovered.distance = dis;
+					}
+				}
+			}
+			if (has_flag(componentsWnd.filter, ComponentsWindow::Filter::OceanExclusion))
+			{
+				for (size_t i = 0; i < scene.ocean_exclusions.GetCount(); ++i)
+				{
+					Entity entity = scene.ocean_exclusions.GetEntity(i);
+					if (!scene.transforms.Contains(entity))
+					{
+						continue;
+					}
 					const TransformComponent& transform = *scene.transforms.GetComponent(entity);
 
 					XMVECTOR disV = XMVector3LinePointDistance(XMLoadFloat3(&pickRay.origin), XMLoadFloat3(&pickRay.origin) + XMLoadFloat3(&pickRay.direction), transform.GetPositionV());
@@ -3132,6 +3161,7 @@ void EditorComponent::Update(float dt)
 		componentsWnd.decalWnd.SetEntity(INVALID_ENTITY);
 		componentsWnd.envProbeWnd.SetEntity(INVALID_ENTITY);
 		componentsWnd.forceFieldWnd.SetEntity(INVALID_ENTITY);
+		componentsWnd.oceanExclusionWnd.SetEntity(INVALID_ENTITY);
 		componentsWnd.springWnd.SetEntity(INVALID_ENTITY);
 		componentsWnd.ikWnd.SetEntity(INVALID_ENTITY);
 		componentsWnd.transformWnd.SetEntity(INVALID_ENTITY);
@@ -3170,6 +3200,7 @@ void EditorComponent::Update(float dt)
 		componentsWnd.decalWnd.SetEntity(picked.entity);
 		componentsWnd.envProbeWnd.SetEntity(picked.entity);
 		componentsWnd.forceFieldWnd.SetEntity(picked.entity);
+		componentsWnd.oceanExclusionWnd.SetEntity(picked.entity);
 		componentsWnd.springWnd.SetEntity(picked.entity);
 		componentsWnd.ikWnd.SetEntity(picked.entity);
 		componentsWnd.transformWnd.SetEntity(picked.entity);
@@ -4347,6 +4378,38 @@ void EditorComponent::Render() const
 
 
 					wi::font::Draw(ICON_FORCE, fp, cmd);
+				}
+			}
+
+			if (has_flag(componentsWnd.filter, ComponentsWindow::Filter::OceanExclusion))
+			{
+				for (size_t i = 0; i < scene.ocean_exclusions.GetCount(); ++i)
+				{
+					Entity entity = scene.ocean_exclusions.GetEntity(i);
+					if (!scene.transforms.Contains(entity))
+					{
+						continue;
+					}
+					const TransformComponent& transform = *scene.transforms.GetComponent(entity);
+
+					fp.position = transform.GetPosition();
+					fp.scaling = scaling * camera_scaling(transform.GetPosition());
+					fp.color = inactiveEntityColor;
+
+					if (hovered.entity == entity)
+					{
+						fp.color = hoveredEntityColor;
+					}
+					for (auto& picked : translator.selected)
+					{
+						if (picked.entity == entity)
+						{
+							fp.color = selectedEntityColor;
+							break;
+						}
+					}
+
+					wi::font::Draw(ICON_OCEANEXCLUSION, fp, cmd);
 				}
 			}
 
@@ -6775,6 +6838,7 @@ void EditorComponent::RefreshSceneList()
 			componentsWnd.emitterWnd.SetEntity(wi::ecs::INVALID_ENTITY);
 			componentsWnd.hairWnd.SetEntity(wi::ecs::INVALID_ENTITY);
 			componentsWnd.forceFieldWnd.SetEntity(wi::ecs::INVALID_ENTITY);
+			componentsWnd.oceanExclusionWnd.SetEntity(wi::ecs::INVALID_ENTITY);
 			componentsWnd.springWnd.SetEntity(wi::ecs::INVALID_ENTITY);
 			componentsWnd.ikWnd.SetEntity(wi::ecs::INVALID_ENTITY);
 			componentsWnd.transformWnd.SetEntity(wi::ecs::INVALID_ENTITY);
@@ -6949,6 +7013,13 @@ void EditorComponent::FocusCameraOnSelected()
 		{
 			aabb = AABB::Merge(aabb, scene.aabb_decals[scene.decals.GetIndex(x.entity)]);
 		}
+		if (const OceanExclusionComponent* exclusion = scene.ocean_exclusions.GetComponent(x.entity))
+		{
+			if (exclusion->aabb._min.x <= exclusion->aabb._max.x)
+			{
+				aabb = AABB::Merge(aabb, exclusion->aabb);
+			}
+		}
 		if (scene.probes.Contains(x.entity))
 		{
 			aabb = AABB::Merge(aabb, scene.aabb_probes[scene.probes.GetIndex(x.entity)]);
@@ -6998,6 +7069,37 @@ XMFLOAT3 EditorComponent::GetPositionInFrontOfCamera() const
 		in_front_of_camera.z = 0;
 	}
 	return in_front_of_camera;
+}
+
+void EditorComponent::AddOceanExclusion(float water_height)
+{
+	Scene& scene = GetCurrentScene();
+	const CameraComponent& camera = GetCurrentEditorScene().camera;
+	XMFLOAT3 position = GetPositionInFrontOfCamera();
+	if (std::abs(camera.At.y) > 1e-4f)
+	{
+		const float distance = (water_height - camera.Eye.y) / camera.At.y;
+		if (distance > 0 && distance < 250.0f)
+		{
+			XMStoreFloat3(&position, camera.GetEye() + camera.GetAt() * distance);
+		}
+	}
+	position.y = water_height;
+	const Entity entity = scene.Entity_CreateOceanExclusion("ocean_exclusion", position, XMFLOAT3(10, 10, 10));
+
+	wi::Archive& archive = AdvanceHistory();
+	archive << HISTORYOP_ADD;
+	RecordSelection(archive);
+	ClearSelected();
+	AddSelected(entity);
+	RecordSelection(archive);
+	RecordEntity(archive, entity);
+
+	wi::renderer::SetToDrawDebugOceanExclusions(true);
+	generalWnd.debugOceanExclusionsCheckBox.SetCheck(true);
+	componentsWnd.oceanExclusionWnd.SetEntity(entity);
+	componentsWnd.oceanExclusionWnd.SetMinimized(false);
+	componentsWnd.RefreshEntityTree();
 }
 
 void EditorComponent::ReloadTerrainProps()
