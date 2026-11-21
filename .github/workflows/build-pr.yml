@@ -160,7 +160,7 @@ jobs:
     - uses: actions/checkout@v4
 
     - name: Install latest clang
-      if: install_clang
+      if: matrix.install_clang
       run: choco upgrade llvm --no-progress -y
 
     - name: Compile with embedded shaders
