@@ -23,6 +23,9 @@ jobs:
       with:
         msbuild-architecture: x64
 
+    - name: Install latest clang
+      run: choco upgrade llvm --no-progress -y
+
     - name: Restore Ccache database
       id: restore-ccache
       uses: actions/cache/restore@v4
