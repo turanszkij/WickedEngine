@@ -157,8 +157,10 @@ jobs:
     steps:
     - uses: actions/checkout@v4
 
-    - name: Install latest clang
-      run: choco upgrade llvm --no-progress -y
+    - name: Install Clang 23
+      uses: KyleMayes/install-llvm-action@v2
+      with:
+        version: "23"
 
     - name: Compile with embedded shaders
       shell: cmd
