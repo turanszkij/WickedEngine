@@ -141,10 +141,12 @@ jobs:
       matrix:
         include:
         - name: cmake
+          install_clang: false
           cmake_extra_opts: ""
           cmake_build_opts: --config Release
           editor_path: build\Editor\Release\Editor.exe
         - name: cmake clang
+          install_clang: true
           cmake_extra_opts: >
             -GNinja
             -DCMAKE_BUILD_TYPE=Release
@@ -156,6 +158,10 @@ jobs:
     name: windows (${{ matrix.name }})
     steps:
     - uses: actions/checkout@v4
+
+    - name: Install latest clang
+      if: matrix.install_clang
+      run: choco upgrade llvm --no-progress -y
 
     - name: Compile with embedded shaders
       shell: cmd
