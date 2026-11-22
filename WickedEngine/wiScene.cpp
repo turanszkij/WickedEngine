@@ -4504,13 +4504,21 @@ namespace wi::scene
 		if (instanceArrayMapped == nullptr)
 			return;
 
-		if (impostors.GetCount() > 0 && objects.GetCount() > 0)
+		// Static impostors are appended after the object impostors, they need to fit into the same buffers:
+		impostorStaticCount = 0;
+		for (size_t i = 0; i < impostors.GetCount(); ++i)
 		{
-			impostor_ib_format = GetIndexBufferFormatRaw((uint32_t)objects.GetCount() * 4);
+			impostorStaticCount += impostors[i].GetStaticImpostorCount();
+		}
+		const uint32_t impostor_capacity_required = uint32_t(objects.GetCount()) + impostorStaticCount;
 
-			if (allocated_impostor_capacity < objects.GetCount())
+		if (impostors.GetCount() > 0 && impostor_capacity_required > 0)
+		{
+			impostor_ib_format = GetIndexBufferFormatRaw(impostor_capacity_required * 4);
+
+			if (allocated_impostor_capacity < impostor_capacity_required)
 			{
-				allocated_impostor_capacity = uint32_t(objects.GetCount() * 2); // *2 to grow fast
+				allocated_impostor_capacity = impostor_capacity_required * 2; // *2 to grow fast
 
 				GPUBufferDesc desc;
 				desc.usage = Usage::DEFAULT;
@@ -4712,7 +4720,7 @@ namespace wi::scene
 
 		if (impostors.GetCount() > 0)
 		{
-			impostorMeshletCount = triangle_count_to_meshlet_count(uint32_t(objects.GetCount()) * 2);
+			impostorMeshletCount = triangle_count_to_meshlet_count(impostor_capacity_required * 2);
 
 			ShaderMaterial material = shader_material_null;
 			material.shaderType_meshblend = 0xFFFF;

@@ -1659,6 +1659,17 @@ struct LensFlarePush
 	uint2 xLensFlareDirectionalLight;
 };
 
+struct ImpostorPreparePush
+{
+	uint count;
+	int static_impostors;	// -1: process scene instances, otherwise: bindless raw buffer of static impostors (float4: xyz = position, w = packed half2(rotationY, scale))
+	int slice_offset;		// static impostors only: impostor texture slice offset
+	float radius;			// static impostors only: mesh bounding sphere radius
+
+	float3 center;			// static impostors only: mesh bounding sphere center in mesh space
+	uint padding;
+};
+
 struct WetmapPush
 {
 	int wetmap;

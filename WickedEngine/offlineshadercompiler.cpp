@@ -274,6 +274,7 @@ wi::vector<ShaderEntry> shaders = {
 	{"impostorPS_simple", wi::graphics::ShaderStage::PS },
 	{"impostorPS_prepass", wi::graphics::ShaderStage::PS },
 	{"impostorPS_prepass_depthonly", wi::graphics::ShaderStage::PS },
+	{"impostorPS_shadow", wi::graphics::ShaderStage::PS },
 	{"forceFieldVisualizerPS", wi::graphics::ShaderStage::PS },
 	{"envMap_skyPS_static", wi::graphics::ShaderStage::PS },
 	{"envMap_skyPS_dynamic", wi::graphics::ShaderStage::PS },

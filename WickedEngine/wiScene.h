@@ -57,7 +57,7 @@ namespace wi::scene
 		wi::ecs::ComponentManager<ScriptComponent>& scripts = componentLibrary.Register<ScriptComponent>("wi::scene::Scene::scripts");
 		wi::ecs::ComponentManager<ExpressionComponent>& expressions = componentLibrary.Register<ExpressionComponent>("wi::scene::Scene::expressions");
 		wi::ecs::ComponentManager<HumanoidComponent>& humanoids = componentLibrary.Register<HumanoidComponent>("wi::scene::Scene::humanoids", 3); // version = 3
-		wi::ecs::ComponentManager<wi::terrain::Terrain>& terrains = componentLibrary.Register<wi::terrain::Terrain>("wi::scene::Scene::terrains", 8); // version = 8
+		wi::ecs::ComponentManager<wi::terrain::Terrain>& terrains = componentLibrary.Register<wi::terrain::Terrain>("wi::scene::Scene::terrains", 9); // version = 9
 		wi::ecs::ComponentManager<wi::Sprite>& sprites = componentLibrary.Register<wi::Sprite>("wi::scene::Scene::sprites", 2); // version = 2
 		wi::ecs::ComponentManager<wi::SpriteFont>& fonts = componentLibrary.Register<wi::SpriteFont>("wi::scene::Scene::fonts");
 		wi::ecs::ComponentManager<wi::VoxelGrid>& voxel_grids = componentLibrary.Register<wi::VoxelGrid>("wi::scene::Scene::voxel_grids");
@@ -254,6 +254,7 @@ namespace wi::scene
 		uint32_t impostorGeometryOffset = ~0u;
 		uint32_t impostorMaterialOffset = ~0u;
 		uint32_t impostorMeshletCount = 0;
+		uint32_t impostorStaticCount = 0; // total count of static impostors in all ImpostorComponent::static_impostors buffers
 
 		wi::EmittedParticleSystem rainEmitter;
 		MaterialComponent rainMaterial;

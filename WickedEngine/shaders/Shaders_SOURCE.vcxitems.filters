@@ -974,6 +974,9 @@
     <FxCompile Include="$(MSBuildThisFileDirectory)impostorPS_prepass_depthonly.hlsl">
       <Filter>PS</Filter>
     </FxCompile>
+    <FxCompile Include="$(MSBuildThisFileDirectory)impostorPS_shadow.hlsl">
+      <Filter>PS</Filter>
+    </FxCompile>
     <FxCompile Include="$(MSBuildThisFileDirectory)trailVS.hlsl">
       <Filter>VS</Filter>
     </FxCompile>
