@@ -4510,7 +4510,14 @@ void UpdatePerFrameData(
 		wilog("meshlet buffer resized: %s", wi::helper::GetMemorySizeText(desc.size).c_str());
 	}
 	frameCB.meshletbuffer = device->GetDescriptorIndex(&buffers[BUFFERTYPE_MESHLET], SubresourceType::SRV);
-	wi::profiler::AddStat("meshlets", meshletCount);
+
+	wi::profiler::AddStat("visible meshlets", meshletCount);
+	wi::profiler::AddStat("visible objects", vis.visibleObjects.size());
+	wi::profiler::AddStat("visible lights", vis.visibleLights.size());
+	wi::profiler::AddStat("visible decals", vis.visibleDecals.size());
+	wi::profiler::AddStat("visible probes", vis.visibleEnvProbes.size());
+	wi::profiler::AddStat("visible hairs", vis.visibleHairs.size());
+	wi::profiler::AddStat("visible emitters", vis.visibleEmitters.size());
 
 	// See if indirect debug buffer needs to be resized:
 	if (indirectDebugStatsReadback_available[device->GetBufferIndex()] && indirectDebugStatsReadback[device->GetBufferIndex()].mapped_data != nullptr)

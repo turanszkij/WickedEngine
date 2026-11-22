@@ -1031,6 +1031,13 @@ namespace wi::scene
 		wi::profiler::AddStat("objects", objects.GetCount());
 		wi::profiler::AddStat("meshes", meshes.GetCount());
 		wi::profiler::AddStat("static impostors", impostorStaticCount);
+		wi::profiler::AddStat("lights", lights.GetCount());
+		wi::profiler::AddStat("decals", decals.GetCount());
+		wi::profiler::AddStat("probes", probes.GetCount());
+		wi::profiler::AddStat("hairs", hairs.GetCount());
+		wi::profiler::AddStat("emitters", emitters.GetCount());
+		wi::profiler::AddStat("colliders", colliders.GetCount());
+		wi::profiler::AddStat("sounds", sounds.GetCount());
 	}
 	void Scene::Clear()
 	{

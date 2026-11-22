@@ -380,43 +380,44 @@ namespace wi::profiler
 		}
 
 		// Print CPU ranges:
-		ss << ranges[cpu_frame].name << ": " << std::fixed << ranges[cpu_frame].time << " ms" << std::endl;
+		ss << ranges[cpu_frame].name << ": " << std::fixed << ranges[cpu_frame].time << " ms\n";
 		for (auto& x : time_cache_cpu)
 		{
 			if (x.second.num_hits > 1)
 			{
-				ss << "\t" << x.first << " (" << x.second.num_hits << "x)" << ": " << std::fixed << x.second.total_time << " ms" << std::endl;
+				ss << "\t" << x.first << " (" << x.second.num_hits << "x)" << ": " << std::fixed << x.second.total_time << " ms\n";
 			}
 			else if(x.second.num_hits == 1)
 			{
-				ss << "\t" << x.first << ": " << std::fixed << x.second.total_time << " ms" << std::endl;
+				ss << "\t" << x.first << ": " << std::fixed << x.second.total_time << " ms\n";
 			}
 			x.second.num_hits = 0;
 			x.second.total_time = 0;
 		}
-		ss << std::endl;
+		ss << "\n";
 
 		// Print GPU ranges:
-		ss << ranges[gpu_frame].name << ": " << std::fixed << ranges[gpu_frame].time << " ms" << std::endl;
+		ss << ranges[gpu_frame].name << ": " << std::fixed << ranges[gpu_frame].time << " ms\n";
 		for (auto& x : time_cache_gpu)
 		{
 			if (x.second.num_hits > 1)
 			{
-				ss << "\t" << x.first << " (" << x.second.num_hits << "x)" << ": " << std::fixed << x.second.total_time << " ms" << std::endl;
+				ss << "\t" << x.first << " (" << x.second.num_hits << "x)" << ": " << std::fixed << x.second.total_time << " ms\n";
 			}
 			else if (x.second.num_hits == 1)
 			{
-				ss << "\t" << x.first << ": " << std::fixed << x.second.total_time << " ms" << std::endl;
+				ss << "\t" << x.first << ": " << std::fixed << x.second.total_time << " ms\n";
 			}
 			x.second.num_hits = 0;
 			x.second.total_time = 0;
 		}
-		ss << std::endl;
+		ss << "\n";
 
 		// Print stats:
+		ss << "Stats:\n";
 		for (auto& x : stats)
 		{
-			ss << x.name << ": " << x.value << std::endl;
+			ss << "\t" << x.name << ": " << x.value << "\n";
 		}
 		stats.clear();
 
