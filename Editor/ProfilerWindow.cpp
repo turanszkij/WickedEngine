@@ -30,7 +30,7 @@ void ProfilerWindow::Create(EditorComponent* _editor)
 		wi::profiler::SetEnabled(false);
 	});
 
-	profilerWidget.SetSize(XMFLOAT2(200, 1000));
+	profilerWidget.SetSize(XMFLOAT2(200, 2000));
 	AddWidget(&profilerWidget);
 
 	auto size = XMFLOAT2(300, 400);

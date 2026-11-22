@@ -5441,9 +5441,10 @@ void UpdateRenderData(
 
 	// Hair particle systems GPU simulation:
 	//	(This must be non-async too, as prepass will render hairs!)
-	static thread_local wi::vector<HairParticleSystem::UpdateGPUItem> hair_updates;
 	if (!vis.visibleHairs.empty())
 	{
+		static thread_local wi::vector<HairParticleSystem::UpdateGPUItem> hair_updates;
+		hair_updates.clear();
 		auto range = wi::profiler::BeginRangeGPU("HairParticles - Simulate", cmd);
 		for (uint32_t hairIndex : vis.visibleHairs)
 		{
@@ -5466,7 +5467,6 @@ void UpdateRenderData(
 			}
 		}
 		HairParticleSystem::UpdateGPU(hair_updates.data(), (uint32_t)hair_updates.size(), cmd);
-		hair_updates.clear();
 		wi::profiler::EndRange(range);
 	}
 
