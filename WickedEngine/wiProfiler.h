@@ -36,6 +36,12 @@ namespace wi::profiler
 	// End a profiling range
 	void EndRange(range_id id);
 
+	// Add named statistic for one frame
+	void AddStat(const char* name, int64_t value);
+
+	template <typename T>
+	void AddStat(const char* name, T value) { AddStat(name, int64_t(value)); };
+
 	// helper using RAII to avoid having to manually call BeginRangeCPU/EndRange at beginning/end
 	struct ScopedRangeCPU
 	{
