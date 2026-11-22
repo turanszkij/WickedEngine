@@ -1026,6 +1026,11 @@ namespace wi::scene
 		{
 			device->CopyBufferAsync(async_buffer_uploads.data(), async_buffer_uploads.size(), "Scene async buffer updates");
 		}
+
+		wi::profiler::AddStat("materials", materials.GetCount());
+		wi::profiler::AddStat("objects", objects.GetCount());
+		wi::profiler::AddStat("meshes", meshes.GetCount());
+		wi::profiler::AddStat("static impostors", impostorStaticCount);
 	}
 	void Scene::Clear()
 	{

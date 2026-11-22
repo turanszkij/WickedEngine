@@ -3669,7 +3669,7 @@ void UpdateVisibility(Visibility& vis)
 	// Initialize visible indices:
 	vis.Clear();
 
-	vis.meshlet_counter.fetch_add(vis.scene->impostorMeshletCount);
+	vis.meshlet_counter.fetch_add(vis.scene->impostorMeshletCount, std::memory_order_relaxed);
 
 	if (!GetFreezeCullingCameraEnabled())
 	{
@@ -3793,8 +3793,6 @@ void UpdateVisibility(Visibility& vis)
 					// Local stream compaction:
 					stream_compaction.list[stream_compaction.count++] = args.groupIndex;
 
-					vis.meshlet_counter.fetch_add(object.meshletCount);
-
 					if ((vis.flags & Visibility::ALLOW_REQUEST_REFLECTION) && object.IsRequestPlanarReflection())
 					{
 						// Planar reflection priority request:
@@ -3803,7 +3801,12 @@ void UpdateVisibility(Visibility& vis)
 						AtomicMin((volatile int64_t*)&vis.closest_ref, packed_ref);
 					}
 
-					if (object.GetFilterMask() & FILTER_TRANSPARENT)
+					const uint32_t filterMask = object.GetFilterMask();
+					if (filterMask & FILTER_OPAQUE)
+					{
+						vis.meshlet_counter.fetch_add(object.meshletCount, std::memory_order_relaxed);
+					}
+					if (filterMask & FILTER_TRANSPARENT)
 					{
 						vis.transparents_visible.store(true);
 					}
@@ -3973,7 +3976,7 @@ void UpdateVisibility(Visibility& vis)
 				if (!occluded)
 				{
 					vis.visibleHairs.push_back((uint32_t)i);
-					vis.meshlet_counter.fetch_add(hair.meshletCount);
+					vis.meshlet_counter.fetch_add(hair.meshletCount, std::memory_order_relaxed);
 				}
 			}
 		});
@@ -4493,7 +4496,7 @@ void UpdatePerFrameData(
 	frameCB.texture_wind_index = device->GetDescriptorIndex(&textures[TEXTYPE_3D_WIND], SubresourceType::SRV);
 	frameCB.cluster_lod_threshold = CLUSTER_LOD_ERROR_THRESHOLD;
 
-	const uint32_t meshletCount = vis.meshlet_counter.load();
+	const uint32_t meshletCount = vis.meshlet_counter.load(std::memory_order_acquire);
 	if (buffers[BUFFERTYPE_MESHLET].desc.size < meshletCount * sizeof(ShaderMeshlet))
 	{
 		GPUBufferDesc desc;
@@ -4507,6 +4510,7 @@ void UpdatePerFrameData(
 		wilog("meshlet buffer resized: %s", wi::helper::GetMemorySizeText(desc.size).c_str());
 	}
 	frameCB.meshletbuffer = device->GetDescriptorIndex(&buffers[BUFFERTYPE_MESHLET], SubresourceType::SRV);
+	wi::profiler::AddStat("meshlets", meshletCount);
 
 	// See if indirect debug buffer needs to be resized:
 	if (indirectDebugStatsReadback_available[device->GetBufferIndex()] && indirectDebugStatsReadback[device->GetBufferIndex()].mapped_data != nullptr)
