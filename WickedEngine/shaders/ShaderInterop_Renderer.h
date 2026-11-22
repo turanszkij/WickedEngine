@@ -199,7 +199,7 @@ struct alignas(16) ShaderTextureSlot
 	int sparse_residencymap_descriptor;
 	int sparse_feedbackmap_descriptor;
 
-	inline void init()
+	constexpr void init()
 	{
 		uvset_aniso_lodclamp = 0;
 		texture_descriptor = -1;
@@ -415,7 +415,7 @@ struct alignas(32) ShaderMaterial
 
 	float4 padding;
 
-	inline void init()
+	constexpr void init()
 	{
 		baseColor = uint2(0, 0);
 		normalmap_pom_alphatest_displacement = uint2(0, 0);
@@ -447,14 +447,15 @@ struct alignas(32) ShaderMaterial
 			textures[i].init();
 		}
 	}
-	static ShaderMaterial get_null()
+
+#ifdef __cplusplus
+	constexpr static ShaderMaterial get_null()
 	{
-		ShaderMaterial ret;
+		ShaderMaterial ret = {};
 		ret.init();
 		return ret;
 	}
-
-#ifndef __cplusplus
+#else
 	inline half4 GetBaseColor() { return unpack_half4(baseColor); }
 	inline half4 GetSSS() { return unpack_half4(subsurfaceScattering); }
 	inline half4 GetSSSInverse() { return unpack_half4(subsurfaceScattering_inv); }
@@ -567,7 +568,7 @@ struct alignas(32) ShaderGeometry
 	int padding1;
 	int padding2;
 
-	inline void init()
+	constexpr void init()
 	{
 		ib = -1;
 		ib_reorder = -1;
@@ -600,12 +601,14 @@ struct alignas(32) ShaderGeometry
 		padding1 = 0;
 		padding2 = 0;
 	}
-	static ShaderGeometry get_null()
+#ifdef __cplusplus
+	constexpr static ShaderGeometry get_null()
 	{
-		ShaderGeometry ret;
+		ShaderGeometry ret = {};
 		ret.init();
 		return ret;
 	}
+#endif // __cplusplus
 };
 #ifdef __cplusplus
 static_assert(sizeof(ShaderGeometry) == 128);
@@ -783,12 +786,6 @@ struct alignas(32) ShaderMeshInstance
 		padding = float3(0, 0, 0);
 		meshletCount = 0;
 	}
-	static ShaderMeshInstance get_null()
-	{
-		ShaderMeshInstance ret;
-		ret.init();
-		return ret;
-	}
 
 	inline void SetUserStencilRef(uint stencilRef)
 	{
@@ -807,7 +804,14 @@ struct alignas(32) ShaderMeshInstance
 		return sphere;
 	}
 
-#ifndef __cplusplus
+#ifdef __cplusplus
+	inline static ShaderMeshInstance get_null()
+	{
+		ShaderMeshInstance ret = {};
+		ret.init();
+		return ret;
+	}
+#else
 	inline half4 GetColor() { return unpack_half4(color); }
 	inline half3 GetEmissive() { return unpack_half3(emissive); }
 	inline half GetAlphaTest() { return unpack_half2(alphaTest_size).x; }
@@ -1455,7 +1459,7 @@ struct alignas(16) ShaderCamera
 	uint options;
 
 #ifdef __cplusplus
-	inline void init()
+	constexpr void init()
 	{
 		view_projection = {};
 		position = {};
@@ -1612,16 +1616,16 @@ struct alignas(16) CameraCB
 	ShaderCamera cameras[16];
 
 #ifdef __cplusplus
-	inline void init()
+	constexpr void init()
 	{
-		for (int i = 0; i < 16; ++i)
+		for (int i = 0; i < arraysize(cameras); ++i)
 		{
 			cameras[i].init();
 		}
 	}
-	static CameraCB get_null()
+	constexpr static CameraCB get_null()
 	{
-		CameraCB ret;
+		CameraCB ret = {};
 		ret.init();
 		return ret;
 	}
@@ -1629,7 +1633,7 @@ struct alignas(16) CameraCB
 };
 #ifdef __cplusplus
 static_assert(sizeof(CameraCB) <= 64 * 1024); // constant buffer can be max 64k sized
-inline static const CameraCB camera_cb_null = CameraCB::get_null();
+inline static constexpr CameraCB camera_cb_null = CameraCB::get_null();
 #endif // __cplusplus
 
 CONSTANTBUFFER(g_xFrame, FrameCB, CBSLOT_RENDERER_FRAME);
