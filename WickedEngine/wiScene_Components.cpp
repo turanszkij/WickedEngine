@@ -1251,7 +1251,12 @@ namespace wi::scene
 					{
 						sum += weight;
 					}
-					if (sum > 0)
+					// Only normalize if not already normalized (and non-zero). Otherwise we could slightly
+					// change already normalized weights each time due to floating point rounding errors.
+					// epsilon = 1e-5 is fine because weights on the GPU are packed into 12 bits, so there
+					// the smallest difference is 1/4095 = 2.4e-4, and for CPU skinning 1e-5 is still unnoticeable
+					// (a vertex 100m from the origin would be shifted by 1mm at most)
+					if (sum > 0 && std::abs(sum - 1) > 1e-5f)
 					{
 						const float norm = 1.0f / sum;
 						for (auto& weight : weights)
