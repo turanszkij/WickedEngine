@@ -43,6 +43,8 @@ namespace wi
 
 		void resetProgress() { wi::jobsystem::Wait(denoiserContext); sam = -1; denoiserProgress = 0; volumetriccloudResources.ResetFrame(); }
 
+		void setMSAASampleCount(uint32_t value) override {}
+
 		uint8_t instanceInclusionMask_PathTrace = 0xFF;
 
 		// This is an identifier of RenderPath subtype that is used for lua binding.

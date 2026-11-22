@@ -1775,7 +1775,7 @@ void GraphicsWindow::UpdateData()
 		editor->renderPath->resolutionScale = editor->resolutionScale;
 		editor->ResizeBuffers();
 	}
-	if (MSAAComboBox.GetItemUserData(MSAAComboBox.GetSelected()) != editor->renderPath->getMSAASampleCount())
+	if (editor->pathtracer == nullptr && MSAAComboBox.GetItemUserData(MSAAComboBox.GetSelected()) != editor->renderPath->getMSAASampleCount())
 	{
 		editor->renderPath->setMSAASampleCount((uint32_t)MSAAComboBox.GetItemUserData(MSAAComboBox.GetSelected()));
 		editor->ResizeBuffers();
@@ -1802,7 +1802,10 @@ void GraphicsWindow::UpdateData()
 	meshletDebugCheckBox.SetCheck(wi::renderer::GetDebugMeshlets());
 	resolutionScaleSlider.SetValue(editor->resolutionScale);
 	streamingSlider.SetValue(wi::resourcemanager::GetStreamingMemoryThreshold());
-	MSAAComboBox.SetSelectedByUserdataWithoutCallback(editor->renderPath->getMSAASampleCount());
+	if (editor->pathtracer == nullptr)
+	{
+		MSAAComboBox.SetSelectedByUserdataWithoutCallback(editor->renderPath->getMSAASampleCount());
+	}
 	tonemapCombo.SetSelectedByUserdataWithoutCallback((uint64_t)editor->renderPath->getTonemap());
 	exposureSlider.SetValue(editor->renderPath->getExposure());
 	brightnessSlider.SetValue(editor->renderPath->getBrightness());
