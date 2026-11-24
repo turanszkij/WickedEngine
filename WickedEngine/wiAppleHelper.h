@@ -29,4 +29,12 @@ void SetClipboardText(const char* str);
 void SetClipboardImagePNG(const void* data, size_t size);
 void* CreateCursorFromARGB8ImageData(const void* data, uint32_t width, uint32_t height, int hotspotX, int hotspotY);
 void GetSafeArea(void* window, float& left, float& right, float& top, float& bottom);
+bool IsWindowHDRCapable(void* window);
+enum class MetalLayerColorSpace
+{
+	SDR,			// default color space, no EDR
+	HDR10_ST2084,	// ITU-R BT.2100 PQ with EDR
+	HDR_LINEAR,		// extended linear sRGB with EDR
+};
+bool SetMetalLayerColorSpace(void* layer, MetalLayerColorSpace colorspace);
 }

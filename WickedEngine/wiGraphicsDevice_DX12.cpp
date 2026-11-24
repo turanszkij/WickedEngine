@@ -3259,7 +3259,7 @@ std::mutex queue_locker;
 				break;
 			case Format::R16G16B16A16_FLOAT:
 				// This format is HDR (Linear):
-				colorSpace = DXGI_COLOR_SPACE_RGB_FULL_G10_NONE_P709;
+				colorSpace = hdr ? DXGI_COLOR_SPACE_RGB_FULL_G10_NONE_P709 : DXGI_COLOR_SPACE_RGB_FULL_G22_NONE_P709;
 				break;
 			default:
 				// Anything else will be SDR (SRGB):

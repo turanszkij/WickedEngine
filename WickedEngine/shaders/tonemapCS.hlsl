@@ -146,8 +146,10 @@ void main(uint3 DTid : SV_DispatchThreadID)
 		result.rgb += bloom;
 	}
 
+	const bool srgb = flags & TONEMAP_FLAG_SRGB;
+
 	[branch]
-	if (flags & TONEMAP_FLAG_SRGB)
+	if (srgb)
 	{
 		if (flags & TONEMAP_FLAG_ACES)
 		{
@@ -162,23 +164,23 @@ void main(uint3 DTid : SV_DispatchThreadID)
 			result.rgb = tonemap(result.rgb);
 		}
 		result.rgb = ApplySRGBCurve_Fast(result.rgb);
+
+		[branch]
+		if (tonemap_push.texture_colorgrade_lookuptable >= 0)
+		{
+			result.rgb = bindless_textures3D[descriptor_index(tonemap_push.texture_colorgrade_lookuptable)].SampleLevel(sampler_linear_clamp, result.rgb, 0).rgb;
+		}
+
+		[branch]
+		if (flags & TONEMAP_FLAG_DITHER)
+		{
+			// dithering before outputting to SDR will reduce color banding:
+			result.rgb += (dither(DTid.xy) - 0.5) / 64.0;
+		}
 	}
 	else
 	{
-		result *= hdr_calibration;
-	}
-
-	[branch]
-	if (tonemap_push.texture_colorgrade_lookuptable >= 0)
-	{
-		result.rgb = bindless_textures3D[descriptor_index(tonemap_push.texture_colorgrade_lookuptable)].SampleLevel(sampler_linear_clamp, result.rgb, 0).rgb;
-	}
-
-	[branch]
-	if (flags & TONEMAP_FLAG_DITHER)
-	{
-		// dithering before outputting to SDR will reduce color banding:
-		result.rgb += (dither(DTid.xy) - 0.5) / 64.0;
+		result.rgb *= hdr_calibration;
 	}
 
 	result.rgb = (result.rgb - 0.5) * contrast + 0.5 + brightness;

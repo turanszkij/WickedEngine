@@ -406,6 +406,20 @@ void GetSafeArea(void* _window, float& left, float& right, float& top, float& bo
 	
 }
 
+bool IsWindowHDRCapable(void* handle)
+{
+	NSWindow* window = (__bridge NSWindow*)handle;
+	NSScreen* screen = (window && window.screen) ? window.screen : [NSScreen mainScreen];
+	if (!screen)
+		return false;
+	if (@available(macOS 10.15, *))
+	{
+		// This is the headroom the display can reach, independent of the current brightness setting
+		return screen.maximumPotentialExtendedDynamicRangeColorComponentValue > 1.0;
+	}
+	return false;
+}
+
 }
 
 #elif defined(PLATFORM_IOS)
@@ -622,6 +636,69 @@ void GetSafeArea(void* _window, float& left, float& right, float& top, float& bo
 	right = rightInset;
 	top = topInset;
 	bottom = bottomInset;
+}
+
+bool IsWindowHDRCapable(void* _window)
+{
+	UIWindow* window = (__bridge UIWindow*)_window;
+	UIScreen* screen = (window && window.screen) ? window.screen : [UIScreen mainScreen];
+	if (!screen)
+		return false;
+	if (@available(iOS 16.0, *))
+	{
+		return screen.potentialEDRHeadroom > 1.0;
+	}
+	return false;
+}
+
+} // namespace wi::apple
+#endif
+
+#if defined(PLATFORM_MACOS) || defined(PLATFORM_IOS)
+#import <QuartzCore/QuartzCore.h>
+#import <CoreGraphics/CoreGraphics.h>
+
+namespace wi::apple
+{
+
+bool SetMetalLayerColorSpace(void* _layer, MetalLayerColorSpace colorspace)
+{
+	CAMetalLayer* layer = (__bridge CAMetalLayer*)_layer;
+	if (!layer)
+		return false;
+
+	if (@available(macOS 11.0, iOS 16.0, *))
+	{
+		CFStringRef name = nullptr;
+		switch (colorspace)
+		{
+		case MetalLayerColorSpace::HDR10_ST2084:
+			name = kCGColorSpaceITUR_2100_PQ;
+			break;
+		case MetalLayerColorSpace::HDR_LINEAR:
+			name = kCGColorSpaceExtendedLinearSRGB;
+			break;
+		default:
+			break;
+		}
+		if (name != nullptr)
+		{
+			CGColorSpaceRef cs = CGColorSpaceCreateWithName(name);
+			if (cs != nullptr)
+			{
+				layer.wantsExtendedDynamicRangeContent = YES;
+				layer.colorspace = cs; // retained by the layer
+				CGColorSpaceRelease(cs);
+				return true;
+			}
+		}
+
+		// SDR, or the HDR color space could not be created: reset to default (non-EDR) state
+		layer.wantsExtendedDynamicRangeContent = NO;
+		layer.colorspace = nil;
+	}
+	// Before these OS versions the layer is never modified, so it stays in default SDR state
+	return colorspace == MetalLayerColorSpace::SDR;
 }
 
 } // namespace wi::apple
