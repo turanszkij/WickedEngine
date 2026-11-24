@@ -33,7 +33,6 @@ void main(uint3 DTid : SV_DispatchThreadID)
 	{
 		// reverse of the IMAGE_FLAG_OUTPUT_COLOR_SPACE_LINEAR in imagePS
 		//	this is used when scene HDR result is used for GUI background
-		color.rgb /= 9.0f;
 		color.rgb = ApplySRGBCurve_Fast(color.rgb);
 	}
 

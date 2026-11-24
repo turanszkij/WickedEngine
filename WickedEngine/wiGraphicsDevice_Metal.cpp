@@ -988,6 +988,7 @@ namespace metal_internal
 	{
 		wi::allocator::shared_ptr<GraphicsDevice_Metal::AllocationHandler> allocationhandler;
 		ColorSpace colorSpace = ColorSpace::SRGB;
+		void* window = nullptr;
 		NS::SharedPtr<CA::MetalLayer> layer;
 		NS::SharedPtr<CA::MetalDrawable> current_drawable;
 		NS::SharedPtr<MTL::Texture> current_texture;
@@ -1863,6 +1864,36 @@ using namespace metal_internal;
 		internal_state->layer->setDrawableSize(size);
 		internal_state->layer->setDisplaySyncEnabled(desc->vsync);
 		internal_state->layer->setPixelFormat(_ConvertPixelFormat(desc->format));
+
+		if (window != nullptr)
+		{
+			internal_state->window = window;
+		}
+
+		const bool hdr = desc->allow_hdr && IsSwapChainSupportsHDR(swapchain);
+		wi::apple::MetalLayerColorSpace layer_colorspace = wi::apple::MetalLayerColorSpace::SDR;
+		ColorSpace colorspace = ColorSpace::SRGB;
+		if (hdr)
+		{
+			switch (desc->format)
+			{
+			case Format::R10G10B10A2_UNORM:
+				layer_colorspace = wi::apple::MetalLayerColorSpace::HDR10_ST2084;
+				colorspace = ColorSpace::HDR10_ST2084;
+				break;
+			case Format::R16G16B16A16_FLOAT:
+				layer_colorspace = wi::apple::MetalLayerColorSpace::HDR_LINEAR;
+				colorspace = ColorSpace::HDR_LINEAR;
+				break;
+			default:
+				break;
+			}
+		}
+		internal_state->colorSpace = ColorSpace::SRGB;
+		if (wi::apple::SetMetalLayerColorSpace(internal_state->layer.get(), layer_colorspace))
+		{
+			internal_state->colorSpace = colorspace;
+		}
 
 		return internal_state->layer.get() != nullptr;
 	}
@@ -3682,8 +3713,10 @@ using namespace metal_internal;
 	}
 	bool GraphicsDevice_Metal::IsSwapChainSupportsHDR(const SwapChain* swapchain) const
 	{
-		// TODO
-		return false;
+		auto internal_state = to_internal(swapchain);
+		if (internal_state == nullptr || internal_state->window == nullptr)
+			return false;
+		return wi::apple::IsWindowHDRCapable(internal_state->window);
 	}
 
 	void GraphicsDevice_Metal::SparseUpdate(QUEUE_TYPE queue, const SparseUpdateCommand* commands, uint32_t command_count)

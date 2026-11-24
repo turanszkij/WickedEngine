@@ -1221,16 +1221,36 @@ namespace vulkan_internal
 		surfaceFormat.colorSpace = VK_COLOR_SPACE_SRGB_NONLINEAR_KHR;
 		bool valid = false;
 
-		for (const auto& format : swapchain_formats)
+		VkColorSpaceKHR preferredColorSpace = VK_COLOR_SPACE_SRGB_NONLINEAR_KHR;
+		if (internal_state->desc.allow_hdr)
 		{
-			if (!internal_state->desc.allow_hdr && format.colorSpace != VK_COLOR_SPACE_SRGB_NONLINEAR_KHR)
-				continue;
-			if (format.format == surfaceFormat.format)
+			switch (surfaceFormat.format)
 			{
-				surfaceFormat = format;
-				valid = true;
+			case VK_FORMAT_A2B10G10R10_UNORM_PACK32:
+			case VK_FORMAT_A2R10G10B10_UNORM_PACK32:
+				preferredColorSpace = VK_COLOR_SPACE_HDR10_ST2084_EXT;
+				break;
+			case VK_FORMAT_R16G16B16A16_SFLOAT:
+				preferredColorSpace = VK_COLOR_SPACE_EXTENDED_SRGB_LINEAR_EXT;
+				break;
+			default:
 				break;
 			}
+		}
+		const VkColorSpaceKHR candidateColorSpaces[] = { preferredColorSpace, VK_COLOR_SPACE_SRGB_NONLINEAR_KHR };
+		for (VkColorSpaceKHR candidateColorSpace : candidateColorSpaces)
+		{
+			for (const auto& format : swapchain_formats)
+			{
+				if (format.format == surfaceFormat.format && format.colorSpace == candidateColorSpace)
+				{
+					surfaceFormat = format;
+					valid = true;
+					break;
+				}
+			}
+			if (valid)
+				break;
 		}
 		if (!valid)
 		{
