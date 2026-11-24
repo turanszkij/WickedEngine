@@ -733,9 +733,9 @@ void GraphicsWindow::Create(EditorComponent* _editor)
 	raytraceBounceCountSlider.SetTooltip("How many light bounces to compute when doing these ray tracing effects:\n- Path tracing\n- Lightmap baking");
 	raytraceBounceCountSlider.SetSize(XMFLOAT2(wid, itemheight));
 	raytraceBounceCountSlider.SetPos(XMFLOAT2(x, y += step));
-	if (editor->main->config.GetSection("graphics").Has("raytracing_bounce_count"))
+	if (editor->main->config.GetSection("graphics").Has("raytracing_bounces"))
 	{
-		wi::renderer::SetRaytraceBounceCount(editor->main->config.GetSection("graphics").GetInt("raytracing_bounce_count"));
+		wi::renderer::SetRaytraceBounceCount(editor->main->config.GetSection("graphics").GetInt("raytracing_bounces"));
 	}
 	raytraceBounceCountSlider.SetValue((float)wi::renderer::GetRaytraceBounceCount());
 	raytraceBounceCountSlider.OnSlide([this](wi::gui::EventArgs args) {
