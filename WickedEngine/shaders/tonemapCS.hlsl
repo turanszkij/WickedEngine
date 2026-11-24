@@ -146,10 +146,8 @@ void main(uint3 DTid : SV_DispatchThreadID)
 		result.rgb += bloom;
 	}
 
-	const bool srgb = flags & TONEMAP_FLAG_SRGB;
-
 	[branch]
-	if (srgb)
+	if (flags & TONEMAP_FLAG_SRGB)
 	{
 		if (flags & TONEMAP_FLAG_ACES)
 		{
