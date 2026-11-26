@@ -26,6 +26,7 @@ public:
 	wi::gui::CheckBox boneLinesCheckBox;
 	wi::gui::CheckBox debugEmittersCheckBox;
 	wi::gui::CheckBox debugForceFieldsCheckBox;
+	wi::gui::CheckBox debugOceanExclusionsCheckBox;
 	wi::gui::CheckBox debugRaytraceBVHCheckBox;
 	wi::gui::CheckBox placeInFrontOfCameraCheckBox;
 	wi::gui::ComboBox wireFrameComboBox;

@@ -33,6 +33,7 @@
 		1E50AFD92FD044D5000EE545 /* ExpressionWindow.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 1E73E6772F0510A90090D1DA /* ExpressionWindow.cpp */; };
 		1E50AFDA2FD044D5000EE545 /* FontWindow.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 1E73E67D2F0510A90090D1DA /* FontWindow.cpp */; };
 		1E50AFDB2FD044D5000EE545 /* ForceFieldWindow.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 1E73E67F2F0510A90090D1DA /* ForceFieldWindow.cpp */; };
+		FECA59DA3E1FACA5B35E5F54 /* OceanExclusionWindow.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 37B352B34EE955C42BBC050F /* OceanExclusionWindow.cpp */; };
 		1E50AFDC2FD044D5000EE545 /* GeneralWindow.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 1E73E6812F0510A90090D1DA /* GeneralWindow.cpp */; };
 		1E50AFDD2FD044D5000EE545 /* GraphicsWindow.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 1E73E6832F0510A90090D1DA /* GraphicsWindow.cpp */; };
 		1E50AFDE2FD044D5000EE545 /* HairParticleWindow.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 1E73E6852F0510A90090D1DA /* HairParticleWindow.cpp */; };
@@ -81,6 +82,7 @@
 		1E73E6E02F0510A90090D1DA /* GeneralWindow.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 1E73E6812F0510A90090D1DA /* GeneralWindow.cpp */; };
 		1E73E6E12F0510A90090D1DA /* ExpressionWindow.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 1E73E6772F0510A90090D1DA /* ExpressionWindow.cpp */; };
 		1E73E6E22F0510A90090D1DA /* ForceFieldWindow.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 1E73E67F2F0510A90090D1DA /* ForceFieldWindow.cpp */; };
+		50AC60839E28A3CEAF2A0D80 /* OceanExclusionWindow.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 37B352B34EE955C42BBC050F /* OceanExclusionWindow.cpp */; };
 		1E73E6E32F0510A90090D1DA /* ComponentsWindow.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 1E73E6582F0510A90090D1DA /* ComponentsWindow.cpp */; };
 		1E73E6E42F0510A90090D1DA /* GraphicsWindow.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 1E73E6832F0510A90090D1DA /* GraphicsWindow.cpp */; };
 		1E73E6E52F0510A90090D1DA /* SoftBodyWindow.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 1E73E6B52F0510A90090D1DA /* SoftBodyWindow.cpp */; };
@@ -214,7 +216,9 @@
 		1E73E67C2F0510A90090D1DA /* FontWindow.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = FontWindow.h; sourceTree = "<group>"; };
 		1E73E67D2F0510A90090D1DA /* FontWindow.cpp */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.cpp.cpp; path = FontWindow.cpp; sourceTree = "<group>"; };
 		1E73E67E2F0510A90090D1DA /* ForceFieldWindow.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = ForceFieldWindow.h; sourceTree = "<group>"; };
+		581D9DDB8ECD56C205995346 /* OceanExclusionWindow.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = OceanExclusionWindow.h; sourceTree = "<group>"; };
 		1E73E67F2F0510A90090D1DA /* ForceFieldWindow.cpp */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.cpp.cpp; path = ForceFieldWindow.cpp; sourceTree = "<group>"; };
+		37B352B34EE955C42BBC050F /* OceanExclusionWindow.cpp */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.cpp.cpp; path = OceanExclusionWindow.cpp; sourceTree = "<group>"; };
 		1E73E6802F0510A90090D1DA /* GeneralWindow.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = GeneralWindow.h; sourceTree = "<group>"; };
 		1E73E6812F0510A90090D1DA /* GeneralWindow.cpp */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.cpp.cpp; path = GeneralWindow.cpp; sourceTree = "<group>"; };
 		1E73E6822F0510A90090D1DA /* GraphicsWindow.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = GraphicsWindow.h; sourceTree = "<group>"; };
@@ -393,7 +397,9 @@
 				1E73E67C2F0510A90090D1DA /* FontWindow.h */,
 				1E73E67D2F0510A90090D1DA /* FontWindow.cpp */,
 				1E73E67E2F0510A90090D1DA /* ForceFieldWindow.h */,
+				581D9DDB8ECD56C205995346 /* OceanExclusionWindow.h */,
 				1E73E67F2F0510A90090D1DA /* ForceFieldWindow.cpp */,
+				37B352B34EE955C42BBC050F /* OceanExclusionWindow.cpp */,
 				1E73E6802F0510A90090D1DA /* GeneralWindow.h */,
 				1E73E6812F0510A90090D1DA /* GeneralWindow.cpp */,
 				1E73E6822F0510A90090D1DA /* GraphicsWindow.h */,
@@ -674,6 +680,7 @@
 				1E50AFD92FD044D5000EE545 /* ExpressionWindow.cpp in Sources */,
 				1E50AFDA2FD044D5000EE545 /* FontWindow.cpp in Sources */,
 				1E50AFDB2FD044D5000EE545 /* ForceFieldWindow.cpp in Sources */,
+				FECA59DA3E1FACA5B35E5F54 /* OceanExclusionWindow.cpp in Sources */,
 				1E50AFDC2FD044D5000EE545 /* GeneralWindow.cpp in Sources */,
 				1E50AFDD2FD044D5000EE545 /* GraphicsWindow.cpp in Sources */,
 				1E50AFDE2FD044D5000EE545 /* HairParticleWindow.cpp in Sources */,
@@ -727,6 +734,7 @@
 				1E73E6E02F0510A90090D1DA /* GeneralWindow.cpp in Sources */,
 				1E73E6E12F0510A90090D1DA /* ExpressionWindow.cpp in Sources */,
 				1E73E6E22F0510A90090D1DA /* ForceFieldWindow.cpp in Sources */,
+				50AC60839E28A3CEAF2A0D80 /* OceanExclusionWindow.cpp in Sources */,
 				1E73E6E32F0510A90090D1DA /* ComponentsWindow.cpp in Sources */,
 				1E73E6E42F0510A90090D1DA /* GraphicsWindow.cpp in Sources */,
 				1E73E6E52F0510A90090D1DA /* SoftBodyWindow.cpp in Sources */,

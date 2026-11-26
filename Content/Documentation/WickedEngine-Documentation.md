@@ -35,6 +35,7 @@ This is the documentation for the C++ features of Wicked Engine
 		14. [CameraComponent](#cameracomponent)
 		15. [EnvironmentProbeComponent](#environmentprobecomponent)
 		16. [ForceFieldComponent](#forcefieldcomponent)
+			- [OceanExclusionComponent](#oceanexclusioncomponent)
 		17. [DecalComponent](#decalcomponent)
 		18. [AnimationDataComponent](#animationdatacomponent)
 		18. [AnimationComponent](#animationcomponent)
@@ -561,6 +562,24 @@ It is expected that an entity that has EnvironmentProbeComponent, also has Trans
 #### ForceFieldComponent
 [[Header]](../../WickedEngine/wiScene_Components.h) [[Cpp]](../../WickedEngine/wiScene_Components.cpp)
 
+#### OceanExclusionComponent
+[[Header]](../../WickedEngine/wiScene_Components.h) [[Cpp]](../../WickedEngine/wiScene_Components.cpp)
+An ocean exclusion volume subtracts a region of space from the global [ocean](#ocean). Use one for a dry valley below sea level, a cave, a ship interior or a submerged room. Where it intersects the displaced ocean surface it cuts a hole in color and depth, including probe captures and the ocean's shadow-map contribution. A volume entirely below the surface instead makes a dry pocket and leaves the water above intact. Overlapping volumes form a union.
+
+**In the Editor:** use **Weather → Add Ocean Exclusion** beside the ocean settings, or **New → Ocean Exclusion**. Move, rotate or scale the entity, and set **Shape** in its component window. To expose land below sea level, stretch the volume through the waterline (including wave crests) and below the ground. For a custom outline, select a spline together with the exclusion and click **Polygon from spline**; this bakes the current outline, it does not link the entities. The **Ocean Exclusion visualizer** in General settings toggles the outlines. Volumes are saved with the scene and can be duplicated, parented or animated.
+
+The shapes use the entity's local coordinates:
+- `Shape::Box`: `[-1, 1]` on every axis.
+- `Shape::Sphere`: unit sphere (an ellipsoid with nonuniform scale).
+- `Shape::Cylinder`: unit radius along local Y, with Y in `[-1, 1]`.
+- `Shape::Polygon`: prism with Y in `[-1, 1]` and a closed XZ outline of 3–4096 points. Concave outlines are supported using the even-odd rule. Use `SetPolygon()`, `SetPolygonFromWorldPoints()` or `Scene::SetOceanExclusionPolygonFromSpline()` to set it.
+
+**Queries:** `GetOceanPosAt()` still samples the geometric wave surface. Use `Scene::IsUnderOcean()` or `Scene::TryGetOceanSurfaceAt()` for ocean occupancy and `Scene::IsOceanExcludedAt()` to test the volume independently of sea level. Matching shader helpers are in [oceanHF.hlsli](../../WickedEngine/shaders/oceanHF.hlsli). A dry region suppresses ocean buoyancy, swimming and new ocean wetness; it doesn't erase existing wetness or affect water meshes placed by the author. A submerged pocket below an intact ocean column is still sheltered from rain from above.
+
+**Rendering limits:** the exclusion is a mask, not fluid simulation or generated walls. Camera fog and ocean refraction subtract the dry part of their rays, but there is no refractive side-boundary mesh; use level geometry if the boundary needs a visible wall. Reflection probes respect the mask on their normal capture schedule. Wave intersections in the effects that use approximate height/rays remain approximate. Buoyancy uses the engine's usual point sample (center of mass), not an exact clipped hull volume. For performance, prefer a few local volumes and reasonably simple outlines; render cost grows with overlaps and outline complexity.
+
+**Tests:** `OceanExclusionTest` runs without a GPU. Configure CMake with `-DWICKED_OCEAN_GPU_TEST=ON` on a Vulkan 1.3 system (software Vulkan such as lavapipe is supported), build `OceanExclusionVulkanTest`, then run `ctest --test-dir build --output-on-failure -R OceanExclusion`. The Vulkan test executes the shared shader helpers, exercises scene uploads and runs physics/swimming checks. For a visual test, select **Ocean Exclusion Test** in the Tests app or launch it with `ocean_exclusion`.
+
 #### DecalComponent
 [[Header]](../../WickedEngine/wiScene_Components.h) [[Cpp]](../../WickedEngine/wiScene_Components.cpp)
 It is expected that an entity that has DecalComponent, also has TransformComponent and [AABB](#aabb) (axis aligned bounding box) component.
@@ -1057,6 +1076,7 @@ Configuring other debug rendering functionality:
 - `SetToDrawDebugEnvProbes()`: Environment probes will be rendered as reflective spheres and their affection range as oriented bounding boxes.
 - `SetToDrawDebugEmitters()`: Emitter mesh geometries will be rendered as wireframe meshes.
 - `SetToDrawDebugForceFields()`: Force field volumes will be rendered.
+- `SetToDrawDebugOceanExclusions()`: The outlines of ocean exclusion volumes will be rendered.
 - `SetToDrawDebugCameras()`: Cameras will be rendered as oriented boxes.
 
 #### Animation Skinning
@@ -1126,7 +1146,7 @@ GPU driven particles that are attached to a mesh surface. It can be used to rend
 
 ### Ocean
 [[Header]](../../WickedEngine/wiOcean.h) [[Cpp]](../../WickedEngine/wiOcean.cpp)
-Ocean renderer using Fast Fourier Transforms simulation. The ocean surface is always rendered relative to the camera, like an infinitely large water body.
+Ocean renderer using Fast Fourier Transforms simulation. The ocean surface is always rendered relative to the camera, like an infinitely large water body. The ocean can be kept out of parts of the scene with [OceanExclusionComponent](#oceanexclusioncomponent) volumes.
 
 ### Sprite
 [[Header]](../../WickedEngine/wiSprite.h) [[Cpp]](../../WickedEngine/wiSprite.cpp)

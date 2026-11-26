@@ -121,6 +121,7 @@ public:
 	bool cinema_mode_saved_debugColliders = false;
 	bool cinema_mode_saved_debugEmitters = false;
 	bool cinema_mode_saved_debugForceFields = false;
+	bool cinema_mode_saved_debugOceanExclusions = false;
 	bool cinema_mode_saved_debugBoneLines = false;
 	bool cinema_mode_saved_debugPartitionTree = false;
 	bool cinema_mode_saved_debugSprings = false;
@@ -261,6 +262,7 @@ public:
 	void ReloadTerrainProps();
 
 	XMFLOAT3 GetPositionInFrontOfCamera() const;
+	void AddOceanExclusion(float water_height);
 
 	wi::Localization default_localization;
 	wi::Localization current_localization;

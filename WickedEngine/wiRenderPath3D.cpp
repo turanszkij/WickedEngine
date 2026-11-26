@@ -2408,7 +2408,7 @@ namespace wi
 				);
 				rt_first = temporalAAResources.GetCurrent();
 			}
-			if (scene->weather.IsOceanEnabled())
+			if (scene->ocean.IsValid())
 			{
 				wi::renderer::Postprocess_Underwater(
 					rt_first == nullptr ? *rt_read : *rt_first,

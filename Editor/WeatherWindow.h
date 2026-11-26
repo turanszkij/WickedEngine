@@ -58,6 +58,7 @@ public:
 	wi::gui::Slider ocean_detailSlider;
 	wi::gui::Slider ocean_toleranceSlider;
 	wi::gui::Button ocean_resetButton;
+	wi::gui::Button ocean_addExclusionButton;
 
 	wi::gui::ComboBox colorComboBox;
 	wi::gui::ColorPicker colorPicker;

@@ -1,6 +1,6 @@
 #ifndef WI_SHADOW_HF
 #define WI_SHADOW_HF
-#include "globals.hlsli"
+#include "oceanHF.hlsli"
 
 #define SHADOW_SAMPLING_DISK			// enables disk pattern sampling of shadows, otherwise it uses a fixed grid kernel
 //#define SHADOW_SAMPLING_DITHERING		// enables dithering and temporal dithering for sampling, with this, shadows can use lower sample count but noise might be visible
@@ -373,13 +373,10 @@ inline bool rain_blocker_check(in float3 P)
 {
 	// Check ocean blocker:
 	const ShaderOcean ocean = GetWeather().ocean;
-	if (ocean.texture_displacementmap >= 0)
+	[branch]
+	if (ocean.IsValid())
 	{
-		Texture2D displacementmap = bindless_textures[descriptor_index(ocean.texture_displacementmap)];
-		float2 ocean_uv = P.xz * ocean.patch_size_rcp;
-		float3 displacement = displacementmap.SampleLevel(sampler_linear_wrap, ocean_uv, 0).xzy;
-		float water_height = ocean.water_height + displacement.y;
-		if (P.y < water_height)
+		if (ocean_blocks_rain(P, ocean_height_at(ocean, P.xz)))
 		{
 			return true;
 		}
@@ -420,13 +417,10 @@ inline bool rain_blocker_check_prev(in float3 P)
 {
 	// Check ocean blocker:
 	const ShaderOcean ocean = GetWeather().ocean;
-	if (ocean.texture_displacementmap >= 0)
+	[branch]
+	if (ocean.IsValid())
 	{
-		Texture2D displacementmap = bindless_textures[descriptor_index(ocean.texture_displacementmap)];
-		float2 ocean_uv = P.xz * ocean.patch_size_rcp;
-		float3 displacement = displacementmap.SampleLevel(sampler_linear_wrap, ocean_uv, 0).xzy;
-		float water_height = ocean.water_height + displacement.y;
-		if (P.y < water_height)
+		if (ocean_blocks_rain(P, ocean_height_at(ocean, P.xz)))
 		{
 			return true;
 		}

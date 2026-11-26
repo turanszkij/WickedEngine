@@ -65,6 +65,7 @@ Reversed Z-buffer
 Force Fields GPU simulation
 Particle - Depth Buffer collisions
 Ocean simulation (FFT)
+Ocean exclusion volumes (dry places below the ocean level)
 Translucent colored shadows
 Refraction caustics
 Parallax-corrected environment maps

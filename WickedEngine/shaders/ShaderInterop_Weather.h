@@ -341,6 +341,35 @@ struct alignas(16) ShaderWind
 	float padding1;
 };
 
+// Ocean exclusion volume shapes:
+//	Every shape is defined in the local space of the volume, the world space position is
+//	transformed into local space with the transform_x, transform_y, transform_z of ShaderOceanExclusion
+static const uint OCEAN_EXCLUSION_SHAPE_BOX = 0;		// local space box in [-1, 1] range on all axes
+static const uint OCEAN_EXCLUSION_SHAPE_SPHERE = 1;	// local space sphere with radius 1
+static const uint OCEAN_EXCLUSION_SHAPE_CYLINDER = 2;	// local space cylinder along the Y axis with radius 1 and Y in [-1, 1] range
+static const uint OCEAN_EXCLUSION_SHAPE_POLYGON = 3;	// local space prism: a polygon outline on the XZ plane and Y in [-1, 1] range
+
+// A volume inside which the ocean doesn't exist (no ocean surface, no underwater effects):
+//	The scene's ocean exclusion buffer starts with an array of these (ShaderOcean::exclusion_count),
+//	the float2 outline points of the polygon shapes are stored after them in the same buffer
+struct alignas(16) ShaderOceanExclusion
+{
+	float4 transform_x; // world to local space transform: local.x = dot(transform_x, float4(world, 1))
+	float4 transform_y; // world to local space transform: local.y = dot(transform_y, float4(world, 1))
+	float4 transform_z; // world to local space transform: local.z = dot(transform_z, float4(world, 1))
+
+	float3 aabb_min; // world space bounds, identical to the CPU AABB
+	uint shape; // OCEAN_EXCLUSION_SHAPE_
+
+	float3 aabb_max;
+	uint polygon_offset; // byte offset of the first float2 outline point in the exclusion buffer (polygon shape only)
+
+	uint polygon_count; // number of outline points (polygon shape only)
+	uint padding0;
+	uint padding1;
+	uint padding2;
+};
+
 struct alignas(16) ShaderOcean
 {
 	float4 water_color;
@@ -349,6 +378,11 @@ struct alignas(16) ShaderOcean
 	float patch_size_rcp;
 	int texture_displacementmap;
 	int texture_gradientmap;
+
+	int exclusion_buffer; // raw buffer of ShaderOceanExclusion array, followed by polygon outline points
+	uint exclusion_count; // number of ShaderOceanExclusion in exclusion_buffer
+	uint padding0;
+	uint padding1;
 
 	bool IsValid() { return texture_displacementmap >= 0; }
 };

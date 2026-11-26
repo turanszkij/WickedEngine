@@ -12,9 +12,29 @@ Texture2D<float4> texture_ocean_displacementmap : register(t0);
 Texture2D<float4> texture_gradientmap : register(t1);
 Texture2D<float4> texture_perlin : register(t2);
 
+// Note about ocean exclusion volumes:
+//	The ocean surface is discarded inside the exclusion volumes of the scene. When the depth is written,
+//	the early depth-stencil mode must not be forced for this, otherwise the depth of the discarded pixels would be
+//	written too. So that the common case of a scene without exclusion volumes keeps the forced early depth-stencil,
+//	the exclusion is compiled into separate shader permutations (OCEAN_EXCLUSION), which are only used when
+//	the scene has ocean exclusion volumes. The shadow map rendering doesn't write depth, so it can always handle them.
+#if defined(SHADOWMAPRENDERING) && !defined(OCEAN_EXCLUSION)
+#define OCEAN_EXCLUSION
+#define OCEAN_EXCLUSION_EARLYDEPTHSTENCIL
+#endif // SHADOWMAPRENDERING && !OCEAN_EXCLUSION
+
+#if !defined(OCEAN_EXCLUSION) || defined(OCEAN_EXCLUSION_EARLYDEPTHSTENCIL)
 [earlydepthstencil]
+#endif // !OCEAN_EXCLUSION || OCEAN_EXCLUSION_EARLYDEPTHSTENCIL
 float4 main(PSIn input) : SV_TARGET
 {
+#ifdef OCEAN_EXCLUSION
+	if (ocean_exclusion_check(input.GetPos3D()))
+	{
+		discard;
+	}
+#endif // OCEAN_EXCLUSION
+
 #ifdef SHADOWMAPRENDERING
 	float4 color = 1;
 	color.rgb += caustics(input.uv * 10);
@@ -131,6 +151,12 @@ float4 main(PSIn input) : SV_TARGET
 			float3 reflectivePosition = reconstruct_position(reflectionUV, reflectiveDepth, camera.reflection_inverse_view_projection);
 			float water_depth = -dot(float4(reflectivePosition, 1), water_plane);
 			water_depth += texture_ocean_displacementmap.SampleLevel(sampler_linear_wrap, reflectivePosition.xz * xOceanPatchSizeRecip, 0).z; // texture contains xzy!
+#ifdef OCEAN_EXCLUSION
+			if (water_depth > 0)
+			{
+				water_depth *= ocean_unexcluded_fraction(surface.P, reflectivePosition);
+			}
+#endif // OCEAN_EXCLUSION
 			reflectiveColor.rgb = lerp(color.rgb, reflectiveColor.rgb, saturate(exp(-water_depth * color.a)));
 		}
 
@@ -178,6 +204,12 @@ float4 main(PSIn input) : SV_TARGET
 		water_depth = max(water_depth, -dot(float4(refraction_position, 1), water_plane));
 		if (camera_below_water && V.y < 0)
 			water_depth = -water_depth;
+#ifdef OCEAN_EXCLUSION
+		if (water_depth > 0)
+		{
+			water_depth *= ocean_unexcluded_fraction(surface.P, refraction_position);
+		}
+#endif // OCEAN_EXCLUSION
 		// Water fog computation:
 		float waterfog = saturate(exp(-water_depth * color.a));
 		float3 transmittance = saturate(exp(-water_depth * surface.extinction * color.a));

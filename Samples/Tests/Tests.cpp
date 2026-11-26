@@ -27,6 +27,7 @@ enum TEST_TYPE
 	INVERSEKINEMATICSTEST,
 	INSTANCESTEST,
 	CONTAINERPERF,
+	OCEANEXCLUSIONTEST,
 };
 
 // Controller Test UI Data, info down below will be using Xbox Controller as reference
@@ -161,6 +162,7 @@ void TestsRenderer::Load()
 	testSelector.AddItem("Inverse Kinematics", INVERSEKINEMATICSTEST);
 	testSelector.AddItem("65k Instances", INSTANCESTEST);
 	testSelector.AddItem("Container perf", CONTAINERPERF);
+	testSelector.AddItem("Ocean Exclusion Test", OCEANEXCLUSIONTEST);
 	testSelector.SetMaxVisibleItemCount(10);
 	testSelector.OnSelect([=](wi::gui::EventArgs args) {
 
@@ -168,6 +170,7 @@ void TestsRenderer::Load()
 		wi::eventhandler::SetVSync(true);
         wi::profiler::SetEnabled(false);
 		wi::renderer::SetToDrawGridHelper(false);
+		wi::renderer::SetToDrawDebugOceanExclusions(false);
 		wi::renderer::SetTemporalAAEnabled(false);
 		wi::renderer::ClearWorld(wi::scene::GetScene());
 		wi::scene::GetScene().weather = WeatherComponent();
@@ -421,13 +424,24 @@ void TestsRenderer::Load()
 			ContainerTest();
 			break;
 
+		case OCEANEXCLUSIONTEST:
+			RunOceanExclusionTest();
+			break;
+
 		default:
 			assert(0);
 			break;
 		}
 
 	});
-	testSelector.SetSelected(0);
+	if (wi::arguments::HasArgument("ocean_exclusion"))
+	{
+		testSelector.SetSelectedByUserdata(OCEANEXCLUSIONTEST);
+	}
+	else
+	{
+		testSelector.SetSelected(0);
+	}
 	gui.AddWidget(&testSelector);
 
 	// Set a theme globally:
@@ -562,6 +576,19 @@ void TestsRenderer::Update(float dt)
 
 		i_led.text = color_sets_desc[color_index_set];
 		i_led.params.color = color_sets[color_index_set];
+	}
+	break;
+	case OCEANEXCLUSIONTEST:
+	{
+		// The sphere moves back and forth, and its hole in the ocean moves with it:
+		TransformComponent* transform = scene->transforms.GetComponent(scene->Entity_FindByName("ocean exclusion sphere"));
+		if (transform != nullptr)
+		{
+			static float time = 0;
+			time += dt;
+			transform->translation_local.z = std::sin(time) * 8;
+			transform->SetDirty();
+		}
 	}
 	break;
 	case INVERSEKINEMATICSTEST:
@@ -1257,5 +1284,87 @@ void TestsRenderer::ContainerTest()
 	font.params.h_align = wi::font::WIFALIGN_CENTER;
 	font.params.v_align = wi::font::WIFALIGN_CENTER;
 	font.params.size = 24;
+	this->AddFont(&font);
+}
+
+void TestsRenderer::RunOceanExclusionTest()
+{
+	// Ocean exclusion volumes take the ocean away from the space inside them:
+	//	the ocean surface is not drawn there, and what is inside is not under water.
+	//	This test puts one volume of every shape into an ocean, half under the ocean level.
+	//	Through each hole in the ocean, the sea bed can be seen under it.
+	//	The sphere moves, to show that the volumes can change every frame, for example with a ship.
+	//	Cubes are dropped: those that fall into the ocean float, those that fall into a volume sink to the sea bed.
+	//	You can find out more in Tests.cpp, RunOceanExclusionTest() function.
+	Scene& scene = wi::scene::GetScene();
+
+	wi::renderer::SetTemporalAAEnabled(true);
+	wi::renderer::SetToDrawDebugOceanExclusions(true); // draws the outlines of the volumes
+
+	// The ocean:
+	WeatherComponent& weather = scene.weathers.Create(CreateEntity());
+	weather.SetOceanEnabled(true);
+	weather.oceanParameters.waterHeight = 0;
+	weather.oceanParameters.wave_amplitude = 200; // small waves, so that the edges of the holes are easy to see
+	weather.ambient = XMFLOAT3(0.4f, 0.4f, 0.45f);
+	weather.horizon = XMFLOAT3(0.5f, 0.6f, 0.8f);
+	weather.zenith = XMFLOAT3(0.1f, 0.25f, 0.6f);
+	scene.Entity_CreateLight("sun", XMFLOAT3(0, 10, 0), XMFLOAT3(1, 0.95f, 0.9f), 8, 100, LightComponent::DIRECTIONAL);
+	scene.transforms.GetComponent(scene.Entity_FindByName("sun"))->RotateRollPitchYaw(XMFLOAT3(0.9f, 0.3f, 0));
+
+	// The sea bed, 6 units under the ocean level:
+	{
+		Entity entity = scene.Entity_CreatePlane("sea bed");
+		TransformComponent& transform = *scene.transforms.GetComponent(entity);
+		transform.Scale(XMFLOAT3(200, 1, 200));
+		transform.Translate(XMFLOAT3(0, -6, 0));
+		RigidBodyPhysicsComponent& rigidbody = scene.rigidbodies.Create(entity);
+		rigidbody.shape = RigidBodyPhysicsComponent::BOX;
+		rigidbody.mass = 0; // static
+	}
+
+	// One volume of every shape, with its center at the ocean level:
+	scene.Entity_CreateOceanExclusion("ocean exclusion box", XMFLOAT3(-21, 0, 0), XMFLOAT3(5, 8, 5), OceanExclusionComponent::Shape::Box);
+	scene.transforms.GetComponent(scene.Entity_FindByName("ocean exclusion box"))->RotateRollPitchYaw(XMFLOAT3(0, 0.5f, 0));
+	scene.Entity_CreateOceanExclusion("ocean exclusion sphere", XMFLOAT3(-7, 0, 0), XMFLOAT3(5, 8, 5), OceanExclusionComponent::Shape::Sphere);
+	scene.Entity_CreateOceanExclusion("ocean exclusion cylinder", XMFLOAT3(7, 0, 0), XMFLOAT3(5, 8, 5), OceanExclusionComponent::Shape::Cylinder);
+	{
+		// The polygon is a star: an outline that is not convex
+		Entity entity = scene.Entity_CreateOceanExclusion("ocean exclusion polygon", XMFLOAT3(21, 0, 0), XMFLOAT3(1, 8, 1), OceanExclusionComponent::Shape::Polygon);
+		OceanExclusionComponent& exclusion = *scene.ocean_exclusions.GetComponent(entity);
+		const int points = 10;
+		for (int i = 0; i < points; ++i)
+		{
+			const float angle = XM_2PI * float(i) / float(points);
+			const float radius = (i % 2 == 0) ? 6.0f : 2.5f;
+			exclusion.polygon.push_back(XMFLOAT2(std::sin(angle) * radius, std::cos(angle) * radius));
+		}
+	}
+
+	// Cubes that are dropped from above: every second one over a volume, the others over the ocean between them
+	for (int i = 0; i < 7; ++i)
+	{
+		Entity entity = scene.Entity_CreateCube("cube " + std::to_string(i));
+		TransformComponent& transform = *scene.transforms.GetComponent(entity);
+		transform.Scale(XMFLOAT3(0.6f, 0.6f, 0.6f));
+		transform.Translate(XMFLOAT3(-21.0f + 7.0f * float(i), 6, 0));
+		RigidBodyPhysicsComponent& rigidbody = scene.rigidbodies.Create(entity);
+		rigidbody.shape = RigidBodyPhysicsComponent::BOX;
+		rigidbody.mass = 10;
+	}
+
+	// The camera looks down at the volumes:
+	TransformComponent transform;
+	transform.RotateRollPitchYaw(XMFLOAT3(0.35f, 0, 0));
+	transform.Translate(XMFLOAT3(0, 14, -34));
+	transform.UpdateTransform();
+	wi::scene::GetCamera().TransformCamera(transform);
+
+	static wi::SpriteFont font;
+	font = wi::SpriteFont("Ocean exclusion volumes: box, sphere (moving), cylinder and polygon.\nThere is no ocean inside them. For more information, please see\nTests.cpp, RunOceanExclusionTest() function.");
+	font.params.posX = GetLogicalWidth() / 2;
+	font.params.posY = 40;
+	font.params.h_align = wi::font::WIFALIGN_CENTER;
+	font.params.size = 20;
 	this->AddFont(&font);
 }

@@ -28,6 +28,8 @@ namespace wi
 		Shader		oceanSurfPS;
 		Shader		oceanSurfPS_envmap;
 		Shader		oceanSurfPS_shadowmap;
+		Shader		oceanSurfPS_exclusion;
+		Shader		oceanSurfPS_envmap_exclusion;
 
 		RasterizerState		rasterizerState;
 		RasterizerState		wireRS;
@@ -35,6 +37,7 @@ namespace wi
 		BlendState			blendState, blendState_occlusionTest, blendState_shadowmap;
 
 		PipelineState PSO, PSO_envmap, PSO_shadowmap, PSO_wire, PSO_occlusionTest;
+		PipelineState PSO_exclusion, PSO_envmap_exclusion; // used when the scene has ocean exclusion volumes
 		Texture perlinTex;
 
 		void LoadShaders()
@@ -48,6 +51,8 @@ namespace wi
 			wi::renderer::LoadShader(ShaderStage::PS, oceanSurfPS, "oceanSurfacePS.cso");
 			wi::renderer::LoadShader(ShaderStage::PS, oceanSurfPS_envmap, "oceanSurfacePS_envmap.cso");
 			wi::renderer::LoadShader(ShaderStage::PS, oceanSurfPS_shadowmap, "oceanSurfacePS_shadowmap.cso");
+			wi::renderer::LoadShader(ShaderStage::PS, oceanSurfPS_exclusion, "oceanSurfacePS_exclusion.cso");
+			wi::renderer::LoadShader(ShaderStage::PS, oceanSurfPS_envmap_exclusion, "oceanSurfacePS_envmap_exclusion.cso");
 			wi::renderer::LoadShader(ShaderStage::PS, wireframePS, "oceanSurfaceSimplePS.cso");
 
 
@@ -64,6 +69,12 @@ namespace wi
 
 				desc.ps = &oceanSurfPS_envmap;
 				device->CreatePipelineState(&desc, &PSO_envmap);
+
+				desc.ps = &oceanSurfPS_exclusion;
+				device->CreatePipelineState(&desc, &PSO_exclusion);
+
+				desc.ps = &oceanSurfPS_envmap_exclusion;
+				device->CreatePipelineState(&desc, &PSO_envmap_exclusion);
 
 				desc.ps = &oceanSurfPS_shadowmap;
 				desc.bs = &blendState_shadowmap;
@@ -486,6 +497,8 @@ namespace wi
 		}
 		locker.unlock();
 
+		// Deliberately conservative: don't let a moving dry mask hide water for
+		// the lifetime of queued occlusion results. This pass never writes depth.
 		device->BindPipelineState(&PSO_occlusionTest, cmd);
 
 		OceanCB cb = GetOceanCBAtDim(params, dim);
@@ -504,7 +517,7 @@ namespace wi
 		device->EventEnd(cmd);
 	}
 
-	void Ocean::RenderForCubemap(CommandList cmd) const
+	void Ocean::RenderForCubemap(CommandList cmd, bool exclusion) const
 	{
 		GraphicsDevice* device = wi::graphics::GetDevice();
 
@@ -546,7 +559,7 @@ namespace wi
 		}
 		locker.unlock();
 
-		device->BindPipelineState(&PSO_envmap, cmd);
+		device->BindPipelineState(exclusion ? &PSO_envmap_exclusion : &PSO_envmap, cmd);
 
 		OceanCB cb = GetOceanCBAtDim(params, dim);
 		device->BindDynamicConstantBuffer(cb, CB_GETBINDSLOT(OceanCB), cmd);
@@ -630,7 +643,7 @@ namespace wi
 		device->EventEnd(cmd);
 	}
 
-	void Ocean::Render(const CameraComponent& camera, CommandList cmd) const
+	void Ocean::Render(const CameraComponent& camera, CommandList cmd, bool exclusion) const
 	{
 		GraphicsDevice* device = wi::graphics::GetDevice();
 
@@ -644,7 +657,9 @@ namespace wi
 		}
 		else
 		{
-			device->BindPipelineState(&PSO, cmd);
+			// The permutation that discards the surface inside ocean exclusion volumes is only used when there are any,
+			//	because it can't force the early depth test, see: oceanSurfacePS.hlsl
+			device->BindPipelineState(exclusion ? &PSO_exclusion : &PSO, cmd);
 		}
 
 		const uint2 dim = uint2(160 * params.surfaceDetail, 90 * params.surfaceDetail);
