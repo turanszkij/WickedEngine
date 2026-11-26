@@ -17,6 +17,24 @@ endif()
 
 project(WickedEngine)
 
+get_property(IS_MULTI_CONFIG GLOBAL PROPERTY GENERATOR_IS_MULTI_CONFIG)
+if(IS_MULTI_CONFIG)
+    if(RelWithDebInfo IN_LIST CMAKE_CONFIGURATION_TYPES)
+        # VS/Xcode default to the first listed config, Ninja Multi-Config uses CMAKE_DEFAULT_BUILD_TYPE
+        list(REMOVE_ITEM CMAKE_CONFIGURATION_TYPES RelWithDebInfo)
+        list(PREPEND CMAKE_CONFIGURATION_TYPES RelWithDebInfo)
+        if(CMAKE_GENERATOR STREQUAL "Ninja Multi-Config")
+            set(CMAKE_DEFAULT_BUILD_TYPE RelWithDebInfo CACHE STRING "Default config for Ninja Multi-Config")
+        endif()
+    endif()
+else()
+    if(NOT CMAKE_BUILD_TYPE)
+        message(STATUS "No build type specified, defaulting to RelWithDebInfo")
+        set(CMAKE_BUILD_TYPE RelWithDebInfo CACHE STRING "Build type" FORCE)
+    endif()
+    set_property(CACHE CMAKE_BUILD_TYPE PROPERTY STRINGS Debug Release RelWithDebInfo)
+endif()
+
 include(CheckIPOSupported)
 
 set(WICKED_ROOT_DIR ${CMAKE_CURRENT_SOURCE_DIR})
