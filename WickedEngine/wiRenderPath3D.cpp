@@ -2572,8 +2572,9 @@ namespace wi
 			{
 				auto range = wi::profiler::BeginRangeGPU("GUI Background Blur", cmd);
 				device->EventBegin("GUI Background Blur", cmd);
-				bool hdrToSRGB = colorspace != ColorSpace::SRGB;
-				wi::renderer::Postprocess_Downsample4x(*rt_read, rtGUIBlurredBackground[0], cmd, hdrToSRGB);
+				// In HDR, the GUI is drawn in SRGB and later converted to linear with the HDR scaling, so the scene is converted back with that for the GUI background:
+				const float hdr_to_srgb_scaling = colorspace != ColorSpace::SRGB ? GetHDRScaling() * GetSDRWhiteScale() : 0;
+				wi::renderer::Postprocess_Downsample4x(*rt_read, rtGUIBlurredBackground[0], cmd, hdr_to_srgb_scaling);
 				wi::renderer::Postprocess_Downsample4x(rtGUIBlurredBackground[0], rtGUIBlurredBackground[2], cmd);
 				wi::renderer::Postprocess_Blur_Gaussian(rtGUIBlurredBackground[2], rtGUIBlurredBackground[1], rtGUIBlurredBackground[2], cmd, -1, -1, true);
 				device->EventEnd(cmd);

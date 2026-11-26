@@ -116,9 +116,9 @@ namespace wi
 				desc.format = Format::R11G11B10_FLOAT;
 				desc.bind_flags = BindFlag::RENDER_TARGET | BindFlag::SHADER_RESOURCE;
 				// try to set background color for swapchain color as if it's using hdr scaling:
-				desc.clear.color[0] = swapChain.desc.clear_color[0] * 9;
-				desc.clear.color[1] = swapChain.desc.clear_color[1] * 9;
-				desc.clear.color[2] = swapChain.desc.clear_color[2] * 9;
+				desc.clear.color[0] = swapChain.desc.clear_color[0] * canvas.GetSDRWhiteScale();
+				desc.clear.color[1] = swapChain.desc.clear_color[1] * canvas.GetSDRWhiteScale();
+				desc.clear.color[2] = swapChain.desc.clear_color[2] * canvas.GetSDRWhiteScale();
 				desc.clear.color[3] = swapChain.desc.clear_color[3];
 				bool success = graphicsDevice->CreateTexture(&desc, nullptr, &rendertargetPreHDR10);
 				assert(success);
@@ -190,7 +190,7 @@ namespace wi
 					fx.pivot = XMFLOAT2(0.5f, 0.5f);
 					if (colorspace != ColorSpace::SRGB)
 					{
-						fx.enableLinearOutputMapping(9);
+						fx.enableLinearOutputMapping(canvas.GetSDRWhiteScale());
 					}
 					fx.image_subresource = splash_screen_subresource;
 					wi::image::Draw(&splash_screen, fx, cmd);
@@ -634,7 +634,7 @@ namespace wi
 			//	If HDR10, the HDR10 output mapping will be performed on whole image later when drawing to swapchain
 			if (colorspace != ColorSpace::SRGB)
 			{
-				params.enableLinearOutputMapping(9);
+				params.enableLinearOutputMapping(canvas.GetSDRWhiteScale());
 			}
 
 			params.cursor = wi::font::Draw(infodisplay_str, params, cmd);
@@ -828,6 +828,7 @@ namespace wi
 		{
 			canvas.init(window);
 		}
+		UpdateSDRWhiteLevel();
 
 		SwapChainDesc desc = swapChain.desc;
 		if (!swapChain.IsValid())
@@ -863,6 +864,11 @@ namespace wi
 			assert(success);
 			});
 
+	}
+
+	void Application::UpdateSDRWhiteLevel()
+	{
+		canvas.sdr_white_level = wi::platform::GetSDRWhiteLevelNits(window);
 	}
 
 	void Application::SetRenderResolution(uint32_t width, uint32_t height)

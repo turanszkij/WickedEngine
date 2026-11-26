@@ -14,6 +14,7 @@ namespace wi
 		uint32_t height = 0;
 		float dpi = 96;
 		float scaling = 1; // custom DPI scaling factor (optional)
+		float sdr_white_level = 80; // SDR reference white level of the display in nits, used when drawing SDR content to HDR output
 		
 		// Safe area insets in logical coordinates without user scaling:
 		//	the safe area can indicate an offset from the borders of the canvas from where it is safe to put important visual elements that will be always well-visible
@@ -46,6 +47,8 @@ namespace wi
 			window_inset_bottom = windowprops.inset_bottom;
 		}
 
+		// Linear HDR output scaling for SDR content (like GUI), so that SDR white matches the display's SDR white level (HDR output 1.0 = 80 nits)
+		constexpr float GetSDRWhiteScale() const { return sdr_white_level / 80.0f; }
 		// How many pixels there are per inch
 		constexpr float GetDPI() const { return dpi * scaling; }
 		// The scaling factor between logical and physical coordinates

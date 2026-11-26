@@ -470,7 +470,7 @@ namespace wi::backlog
 		fx.opacity = wi::math::Lerp(0.9f, 0, saturate(-pos / canvas.GetLogicalHeight()));
 		if (colorspace != ColorSpace::SRGB)
 		{
-			fx.enableLinearOutputMapping(9);
+			fx.enableLinearOutputMapping(canvas.GetSDRWhiteScale());
 		}
 		fx.color = backgroundColor;
 		wi::image::Draw(backgroundTex.IsValid() ? &backgroundTex : nullptr, fx, cmd);
@@ -490,17 +490,17 @@ namespace wi::backlog
 		inputbg.corners_rounding[3].radius = 10;
 		if (colorspace != ColorSpace::SRGB)
 		{
-			inputbg.enableLinearOutputMapping(9);
+			inputbg.enableLinearOutputMapping(canvas.GetSDRWhiteScale());
 		}
 		wi::image::Draw(nullptr, inputbg, cmd);
 
 		if (colorspace != ColorSpace::SRGB)
 		{
-			inputField.sprites[inputField.GetState()].params.enableLinearOutputMapping(9);
-			inputField.font.params.enableLinearOutputMapping(9);
-			toggleButton.sprites[toggleButton.GetState()].params.enableLinearOutputMapping(9);
-			toggleButton.font.params.enableLinearOutputMapping(9);
-			scrollbar.sprites[scrollbar.GetState()].params.enableLinearOutputMapping(9);
+			inputField.sprites[inputField.GetState()].params.enableLinearOutputMapping(canvas.GetSDRWhiteScale());
+			inputField.font.params.enableLinearOutputMapping(canvas.GetSDRWhiteScale());
+			toggleButton.sprites[toggleButton.GetState()].params.enableLinearOutputMapping(canvas.GetSDRWhiteScale());
+			toggleButton.font.params.enableLinearOutputMapping(canvas.GetSDRWhiteScale());
+			scrollbar.sprites[scrollbar.GetState()].params.enableLinearOutputMapping(canvas.GetSDRWhiteScale());
 		}
 		inputField.Render(canvas, cmd);
 
@@ -556,7 +556,7 @@ namespace wi::backlog
 		params.h_wrap = canvas.GetLogicalWidth() - params.posX;
 		if (colorspace != ColorSpace::SRGB)
 		{
-			params.enableLinearOutputMapping(9);
+			params.enableLinearOutputMapping(canvas.GetSDRWhiteScale());
 		}
 
 		static std::deque<LogEntry> entriesCopy;

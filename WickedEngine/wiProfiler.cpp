@@ -779,8 +779,8 @@ namespace wi::profiler
 		header_params.bolden = 0.08f;
 		if (colorspace != ColorSpace::SRGB)
 		{
-			params.enableLinearOutputMapping(9);
-			header_params.enableLinearOutputMapping(9);
+			params.enableLinearOutputMapping(canvas.GetSDRWhiteScale());
+			header_params.enableLinearOutputMapping(canvas.GetSDRWhiteScale());
 		}
 		const float line_height = wi::font::TextHeight("A\nA", params) - wi::font::TextHeight("A", params);
 		const float swatch_size = std::max(4.0f, line_height - 4);
@@ -903,7 +903,7 @@ namespace wi::profiler
 		table_background.color = background_color;
 		if (colorspace != ColorSpace::SRGB)
 		{
-			table_background.enableLinearOutputMapping(9);
+			table_background.enableLinearOutputMapping(canvas.GetSDRWhiteScale());
 		}
 		const XMFLOAT4 table_border_color = text_alpha(0.35f);
 		auto push_table = [&](float tx, float ty, float tw, float th) {
@@ -1353,7 +1353,7 @@ namespace wi::profiler
 			tooltip_bg.color = tooltip_color;
 			if (colorspace != ColorSpace::SRGB)
 			{
-				tooltip_bg.enableLinearOutputMapping(9);
+				tooltip_bg.enableLinearOutputMapping(canvas.GetSDRWhiteScale());
 			}
 			wi::image::Draw(nullptr, tooltip_bg, cmd);
 			p.color = text_color;

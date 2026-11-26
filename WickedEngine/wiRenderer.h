@@ -1032,7 +1032,7 @@ namespace wi::renderer
 		const wi::graphics::Texture& input,
 		const wi::graphics::Texture& output,
 		wi::graphics::CommandList cmd,
-		bool hdrToSRGB = false
+		float hdr_to_srgb_scaling = 0 // > 0: convert linear HDR to SRGB, reversing this linear output mapping scaling
 	);
 	void Postprocess_Lineardepth(
 		const wi::graphics::Texture& input,

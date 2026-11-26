@@ -25,7 +25,7 @@ namespace wi
 		XMUINT2 current_buffersize{};
 		float current_layoutscale{};
 
-		float hdr_scaling = 9.0f;
+		float hdr_scaling = 1.0f; // HDR output multiplier for 2D content, on top of the display SDR white level
 
 		uint32_t msaaSampleCount = 1;
 		uint32_t msaaSampleCount2D = 1;

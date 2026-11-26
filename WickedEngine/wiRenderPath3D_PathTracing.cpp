@@ -696,7 +696,7 @@ namespace wi
 			{
 				auto range = wi::profiler::BeginRangeGPU("GUI Background Blur", cmd);
 				device->EventBegin("GUI Background Blur", cmd);
-				wi::renderer::Postprocess_Downsample4x(rtPostprocess, rtGUIBlurredBackground[0], cmd);
+				wi::renderer::Postprocess_Downsample4x(rtPostprocess, rtGUIBlurredBackground[0], cmd, colorspace != ColorSpace::SRGB ? GetHDRScaling() * GetSDRWhiteScale() : 0);
 				wi::renderer::Postprocess_Downsample4x(rtGUIBlurredBackground[0], rtGUIBlurredBackground[2], cmd);
 				wi::renderer::Postprocess_Blur_Gaussian(rtGUIBlurredBackground[2], rtGUIBlurredBackground[1], rtGUIBlurredBackground[2], cmd, -1, -1, true);
 				device->EventEnd(cmd);

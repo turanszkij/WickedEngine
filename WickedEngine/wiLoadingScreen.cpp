@@ -134,7 +134,7 @@ namespace wi
 			fx.blendFlag = wi::enums::BLENDMODE_ALPHA;
 			if (colorspace != ColorSpace::SRGB)
 			{
-				fx.enableLinearOutputMapping(hdr_scaling);
+				fx.enableLinearOutputMapping(hdr_scaling * GetSDRWhiteScale());
 			}
 
 			wi::image::Draw(&tex, fx, cmd);

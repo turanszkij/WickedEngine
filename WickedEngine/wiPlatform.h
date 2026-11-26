@@ -11,6 +11,7 @@
 #endif
 #include <SDKDDKVer.h>
 #include <windows.h>
+#include <vector>
 
 #if WINAPI_FAMILY == WINAPI_FAMILY_GAMES
 #define PLATFORM_XBOX
@@ -200,5 +201,49 @@ namespace wi::platform
 #else
 		return true;
 #endif
+	}
+
+	// Returns the SDR reference white level in nits of the display that the window is on (Windows "SDR content brightness" setting)
+	//	80 nits is returned when not available, which is the scRGB/HDR10 reference
+	inline float GetSDRWhiteLevelNits(window_type window)
+	{
+		float nits = 80;
+#if defined(PLATFORM_WINDOWS_DESKTOP)
+		if (window == nullptr)
+			return nits;
+		MONITORINFOEXW monitor_info = {};
+		monitor_info.cbSize = sizeof(monitor_info);
+		if (!GetMonitorInfoW(MonitorFromWindow(window, MONITOR_DEFAULTTONEAREST), &monitor_info))
+			return nits;
+		UINT32 path_count = 0;
+		UINT32 mode_count = 0;
+		if (GetDisplayConfigBufferSizes(QDC_ONLY_ACTIVE_PATHS, &path_count, &mode_count) != ERROR_SUCCESS)
+			return nits;
+		std::vector<DISPLAYCONFIG_PATH_INFO> paths(path_count);
+		std::vector<DISPLAYCONFIG_MODE_INFO> modes(mode_count);
+		if (QueryDisplayConfig(QDC_ONLY_ACTIVE_PATHS, &path_count, paths.data(), &mode_count, modes.data(), nullptr) != ERROR_SUCCESS)
+			return nits;
+		for (UINT32 i = 0; i < path_count; ++i)
+		{
+			DISPLAYCONFIG_SOURCE_DEVICE_NAME source_name = {};
+			source_name.header.type = DISPLAYCONFIG_DEVICE_INFO_GET_SOURCE_NAME;
+			source_name.header.size = sizeof(source_name);
+			source_name.header.adapterId = paths[i].sourceInfo.adapterId;
+			source_name.header.id = paths[i].sourceInfo.id;
+			if (DisplayConfigGetDeviceInfo(&source_name.header) != ERROR_SUCCESS || wcscmp(source_name.viewGdiDeviceName, monitor_info.szDevice) != 0)
+				continue;
+			DISPLAYCONFIG_SDR_WHITE_LEVEL white_level = {};
+			white_level.header.type = DISPLAYCONFIG_DEVICE_INFO_GET_SDR_WHITE_LEVEL;
+			white_level.header.size = sizeof(white_level);
+			white_level.header.adapterId = paths[i].targetInfo.adapterId;
+			white_level.header.id = paths[i].targetInfo.id;
+			if (DisplayConfigGetDeviceInfo(&white_level.header) == ERROR_SUCCESS && white_level.SDRWhiteLevel > 0)
+			{
+				nits = float(white_level.SDRWhiteLevel) / 1000.0f * 80.0f; // multiplier of 80 nits, scaled by 1000
+			}
+			break;
+		}
+#endif // PLATFORM_WINDOWS_DESKTOP
+		return nits;
 	}
 }
