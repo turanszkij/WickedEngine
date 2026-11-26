@@ -16,9 +16,8 @@ void ProfilerWidget::Render(const wi::Canvas& canvas, wi::graphics::CommandList 
 
 	ApplyScissor(canvas, scissorRect, cmd);
 
-	wi::profiler::SetBackgroundColor(wi::Color::Transparent());
 	wi::profiler::SetTextColor(font.params.color);
-	wi::profiler::DrawData(canvas, translation.x + 5, translation.y + 5, cmd);
+	wi::profiler::DrawData(canvas, translation.x + 5, translation.y + 5, cmd, ColorSpace::SRGB, GetSize().x - 10);
 }
 
 void ProfilerWindow::Create(EditorComponent* _editor)
@@ -28,7 +27,7 @@ void ProfilerWindow::Create(EditorComponent* _editor)
 
 	OnClose([=](wi::gui::EventArgs args) {
 		wi::profiler::SetEnabled(false);
-	});
+		});
 
 	profilerWidget.SetSize(XMFLOAT2(200, 2000));
 	AddWidget(&profilerWidget);
