@@ -9,6 +9,9 @@ Editor editor;
 @end
 
 @interface AppDelegate : UIResponder <UIApplicationDelegate>
+@end
+
+@interface AppSceneDelegate : UIResponder <UIWindowSceneDelegate>
 @property (nonatomic, strong) UIWindow *window;
 @property (nonatomic, strong) CADisplayLink *displayLink;
 @end
@@ -18,65 +21,69 @@ Editor editor;
 - (BOOL)application:(UIApplication *)application
 	didFinishLaunchingWithOptions:(NSDictionary *)launchOptions
 {
+	return YES;
+}
+
+- (UISceneConfiguration *)application:(UIApplication *)application
+	configurationForConnectingSceneSession:(UISceneSession *)connectingSceneSession
+	options:(UISceneConnectionOptions *)options
+{
+	UISceneConfiguration *configuration = [[UISceneConfiguration alloc] initWithName:@"Default Configuration" sessionRole:connectingSceneSession.role];
+	configuration.delegateClass = [AppSceneDelegate class];
+	return configuration;
+}
+
+@end
+
+@implementation AppSceneDelegate
+
+- (void)scene:(UIScene *)scene willConnectToSession:(UISceneSession *)session options:(UISceneConnectionOptions *)connectionOptions
+{
+	if (![scene isKindOfClass:[UIWindowScene class]])
+		return;
+	if (self.window != nil)
+		return;
+
+	UIWindowScene *windowScene = (UIWindowScene *)scene;
+	self.window = [[UIWindow alloc] initWithWindowScene:windowScene];
+
 	MyViewController *vc = [[MyViewController alloc] init];
 	self.window.rootViewController = vc;
-	
 	[self.window makeKeyAndVisible];
-	
+
 	wi::Timer timer;
 	if (editor.config.Open((wi::apple::GetApplicationSupportPath() + "/config.ini").c_str()))
 	{
 		wilog("config.ini loaded in %.2f milliseconds\n", (float)timer.elapsed_milliseconds());
 	}
-	
+
 	editor.SetWindow((__bridge void*)self.window);
-	
+
 	self.displayLink = [CADisplayLink displayLinkWithTarget:self
-													   selector:@selector(gameLoop)];
+												   selector:@selector(gameLoop)];
 	[self.displayLink addToRunLoop:[NSRunLoop currentRunLoop]
 						   forMode:NSRunLoopCommonModes];
-	
-	[[NSNotificationCenter defaultCenter] addObserver:self
-											 selector:@selector(appDidEnterBackground:)
-												 name:UIApplicationDidEnterBackgroundNotification
-											   object:nil];
 
-	[[NSNotificationCenter defaultCenter] addObserver:self
-											 selector:@selector(appWillEnterForeground:)
-												 name:UIApplicationWillEnterForegroundNotification
-											   object:nil];
-	
-	// Touch callbacks:
 	UITapGestureRecognizer* tap =
 		[[UITapGestureRecognizer alloc]
 			initWithTarget:self
 					action:@selector(OnTap:)];
 	[self.window addGestureRecognizer:tap];
-	
+
 	UIPanGestureRecognizer* pan =
 		[[UIPanGestureRecognizer alloc]
 			initWithTarget:self
 					action:@selector(OnPan:)];
 	[self.window addGestureRecognizer:pan];
-	
+
 	UIPinchGestureRecognizer* pinch =
 		[[UIPinchGestureRecognizer alloc]
 			initWithTarget:self
 					action:@selector(OnPinch:)];
 	[self.window addGestureRecognizer:pinch];
-	
-	return YES;
-}
-- (void)gameLoop {
-	@autoreleasepool{
-		if (editor.is_window_active) // normally the Run handles inactive window and still present, but on iOS I completely disable Run instead
-		{
-			editor.Run();
-		}
-	}
 }
 
-- (void)appDidEnterBackground:(NSNotification *)notification
+- (void)sceneDidEnterBackground:(UIScene *)scene
 {
 	editor.is_window_active = false;
 	if (!editor.IsScriptReplacement()) // editor config is not saved by script replaced executable
@@ -84,9 +91,19 @@ Editor editor;
 		editor.config.Commit();
 	}
 }
-- (void)appWillEnterForeground:(NSNotification *)notification
+
+- (void)sceneWillEnterForeground:(UIScene *)scene
 {
 	editor.is_window_active = true;
+}
+
+- (void)gameLoop {
+	@autoreleasepool{
+		if (editor.is_window_active) // normally the Run handles inactive window and still present, but on iOS I completely disable Run instead
+		{
+			editor.Run();
+		}
+	}
 }
 
 - (void)OnTap:(UITapGestureRecognizer*)gesture

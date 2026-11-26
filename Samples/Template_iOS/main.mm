@@ -8,6 +8,9 @@ wi::Application app;
 @end
 
 @interface AppDelegate : UIResponder <UIApplicationDelegate>
+@end
+
+@interface AppSceneDelegate : UIResponder <UIWindowSceneDelegate>
 @property (nonatomic, strong) UIWindow *window;
 @property (nonatomic, strong) CADisplayLink *displayLink;
 @end
@@ -17,69 +20,84 @@ wi::Application app;
 - (BOOL)application:(UIApplication *)application
 	didFinishLaunchingWithOptions:(NSDictionary *)launchOptions
 {
+	return YES;
+}
+
+- (UISceneConfiguration *)application:(UIApplication *)application
+	configurationForConnectingSceneSession:(UISceneSession *)connectingSceneSession
+	options:(UISceneConnectionOptions *)options
+{
+	UISceneConfiguration *configuration = [[UISceneConfiguration alloc] initWithName:@"Default Configuration" sessionRole:connectingSceneSession.role];
+	configuration.delegateClass = [AppSceneDelegate class];
+	return configuration;
+}
+
+@end
+
+@implementation AppSceneDelegate
+
+- (void)scene:(UIScene *)scene willConnectToSession:(UISceneSession *)session options:(UISceneConnectionOptions *)connectionOptions
+{
+	if (![scene isKindOfClass:[UIWindowScene class]])
+		return;
+	if (self.window != nil)
+		return;
+
+	UIWindowScene *windowScene = (UIWindowScene *)scene;
+	self.window = [[UIWindow alloc] initWithWindowScene:windowScene];
+
 	MyViewController *vc = [[MyViewController alloc] init];
 	self.window.rootViewController = vc;
-	
 	[self.window makeKeyAndVisible];
-	
+
 	app.infoDisplay.active = true;
 	app.infoDisplay.fpsinfo = true;
 	app.infoDisplay.watermark = true;
 	app.infoDisplay.logical_size = true;
 	app.infoDisplay.mouse_info = true;
-	
+
 	app.SetWindow((__bridge void*)self.window);
-	
+
 	self.displayLink = [CADisplayLink displayLinkWithTarget:self
 													   selector:@selector(gameLoop)];
 	[self.displayLink addToRunLoop:[NSRunLoop currentRunLoop]
 						   forMode:NSRunLoopCommonModes];
-	
-	[[NSNotificationCenter defaultCenter] addObserver:self
-					  selector:@selector(appDidEnterBackground:)
-						  name:UIApplicationDidEnterBackgroundNotification
-						object:nil];
 
-	[[NSNotificationCenter defaultCenter] addObserver:self
-					  selector:@selector(appWillEnterForeground:)
-						  name:UIApplicationWillEnterForegroundNotification
-						object:nil];
-	
 	// Touch callbacks:
 	UITapGestureRecognizer* tap =
 		[[UITapGestureRecognizer alloc]
 			initWithTarget:self
 					action:@selector(OnTap:)];
 	[self.window addGestureRecognizer:tap];
-	
+
 	UIPanGestureRecognizer* pan =
 		[[UIPanGestureRecognizer alloc]
 			initWithTarget:self
 					action:@selector(OnPan:)];
 	[self.window addGestureRecognizer:pan];
-	
+
 	UIPinchGestureRecognizer* pinch =
 		[[UIPinchGestureRecognizer alloc]
 			initWithTarget:self
 					action:@selector(OnPinch:)];
 	[self.window addGestureRecognizer:pinch];
-	
-	return YES;
 }
+
+- (void)sceneDidEnterBackground:(UIScene *)scene
+{
+	app.is_window_active = false;
+}
+
+- (void)sceneWillEnterForeground:(UIScene *)scene
+{
+	app.is_window_active = true;
+}
+
 - (void)gameLoop {
 	if (app.is_window_active) // normally the Run handles inactive window and still present, but on iOS I completely disable Run instead
 	{
 		app.Run();
 	}
-}
-
-- (void)appDidEnterBackground:(NSNotification *)notification
-{
-	app.is_window_active = false;
-}
-- (void)appWillEnterForeground:(NSNotification *)notification
-{
-	app.is_window_active = true;
 }
 
 - (void)OnTap:(UITapGestureRecognizer*)gesture
