@@ -58,13 +58,14 @@ namespace wi::profiler
 		inline ~ScopedRangeGPU() { EndRange(id); }
 	};
 
-	// Renders a basic text of the Profiling results to the (x,y) screen coordinate
+	// Renders the Profiling results to the (x,y) screen coordinate:
 	void DrawData(
 		const wi::Canvas& canvas,
 		float x,
 		float y,
 		wi::graphics::CommandList cmd,
-		wi::graphics::ColorSpace colorspace = wi::graphics::ColorSpace::SRGB
+		wi::graphics::ColorSpace colorspace = wi::graphics::ColorSpace::SRGB,
+		float max_width = 0
 	);
 	void DisableDrawForThisFrame();
 
