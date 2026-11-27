@@ -245,6 +245,9 @@ namespace wi::graphics
 			bool sparse_binding_supported = false;
 			wi::allocator::shared_ptr<std::mutex> locker;
 
+			wi::vector<VkSemaphoreSubmitInfo> async_waitSemaphoreInfos;
+			wi::SpinLock async_wait_locker;
+
 			void clear();
 			void signal(VkSemaphore semaphore);
 			void wait(VkSemaphore semaphore);
@@ -272,6 +275,7 @@ namespace wi::graphics
 			wi::vector<CopyCMD> freelist;
 			std::deque<CopyCMD> async_worklist;
 			wi::vector<VkSemaphore> async_semaphore_recycle[BUFFERCOUNT];
+			wi::vector<VkSemaphore> semaphore_pool;
 
 			void init(GraphicsDevice_Vulkan* device);
 			void destroy();
@@ -636,6 +640,7 @@ namespace wi::graphics
 		void SparseUpdate(QUEUE_TYPE queue, const SparseUpdateCommand* commands, uint32_t command_count) override;
 
 		void CopyBufferAsync(const GPUBufferCopyCommand* commands, uint32_t command_count, const char* name = nullptr) const override;
+		void CopyTextureAsync(const TextureCopyCommand* commands, uint32_t command_count, const char* name = nullptr) const override;
 
 		const char* GetTag() const override { return "[Vulkan]"; }
 

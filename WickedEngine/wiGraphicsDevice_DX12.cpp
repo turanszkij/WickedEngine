@@ -3809,6 +3809,8 @@ std::mutex queue_locker;
 				for (size_t i = 0; i < internal_state->footprints.size(); ++i)
 				{
 					const SubresourceData& data = initial_data[i];
+					if (data.data_ptr == nullptr)
+						continue; // skip initialization of this subresource
 
 					hr = dx12_check(internal_state->resource->WriteToSubresource(
 						(UINT)i,
@@ -3837,6 +3839,8 @@ std::mutex queue_locker;
 
 				for (size_t i = 0; i < internal_state->footprints.size(); ++i)
 				{
+					if (initial_data[i].data_ptr == nullptr)
+						continue; // skip initialization of this subresource
 					D3D12_SUBRESOURCE_DATA data = _ConvertSubresourceData(initial_data[i]);
 
 					if (internal_state->rowSizesInBytes[i] > (SIZE_T)-1)
@@ -6018,6 +6022,34 @@ std::mutex queue_locker;
 			auto dst_internal = to_internal(command.dst);
 			auto src_internal = to_internal(command.src);
 			cmd.commandList->CopyBufferRegion(dst_internal->resource.Get(), command.dst_offset, src_internal->resource.Get(), command.src_offset, command.size);
+		}
+		if (name != nullptr)
+		{
+			PIXEndEvent(cmd.commandList.Get());
+		}
+		copyAllocator.submit(cmd, false);
+	}
+	void GraphicsDevice_DX12::CopyTextureAsync(const TextureCopyCommand* commands, uint32_t command_count, const char* name) const
+	{
+		if (command_count == 0)
+			return;
+		CopyAllocator::CopyCMD cmd = copyAllocator.allocate(0);
+		if (name != nullptr)
+		{
+			wchar_t text[128];
+			if (wi::helper::StringConvert(name, text, arraysize(text)) > 0)
+			{
+				PIXBeginEvent(cmd.commandList.Get(), 0xFF000000, text);
+			}
+		}
+		for (uint32_t i = 0; i < command_count; ++i)
+		{
+			const TextureCopyCommand& command = commands[i];
+			const TextureDesc& dst_desc = command.dst->GetDesc();
+			const TextureDesc& src_desc = command.src->GetDesc();
+			CD3DX12_TEXTURE_COPY_LOCATION dst(to_internal(command.dst)->resource.Get(), D3D12CalcSubresource(command.dst_mip, command.dst_slice, 0, dst_desc.mip_levels, dst_desc.array_size));
+			CD3DX12_TEXTURE_COPY_LOCATION src(to_internal(command.src)->resource.Get(), D3D12CalcSubresource(command.src_mip, command.src_slice, 0, src_desc.mip_levels, src_desc.array_size));
+			cmd.commandList->CopyTextureRegion(&dst, 0, 0, 0, &src, nullptr);
 		}
 		if (name != nullptr)
 		{

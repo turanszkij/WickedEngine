@@ -1348,6 +1348,7 @@ namespace wi
 					const uint32_t target_unload_delay = memory_shortage ? 4 : 255;
 
 					int mip_offset = int(resource->streaming_texture.mip_count - desc.mip_levels);
+					const int prev_mip_offset = mip_offset; // absolute mip index of the current texture's first mip
 					if (stream_in)
 					{
 						resource->streaming_unload_delay = 0; // unloading will be immediately halted
@@ -1379,41 +1380,62 @@ namespace wi
 					}
 					if (desc.mip_levels <= resource->streaming_texture.mip_count)
 					{
-						// memory offset of the first mip level in current streaming range:
-						const size_t mip_data_offset = resource->streaming_texture.streaming_data[mip_offset].data_offset;
-						const uint8_t* firstmipdata = resource->filedata.data();
+						const Texture prev_texture = resource->texture;
+						const int file_mip_end = std::max(mip_offset, prev_mip_offset);
+						const uint8_t* firstmipdata = nullptr;
+						size_t mip_data_offset = 0;
 
-						static wi::vector<uint8_t> streaming_file; // make this static to not reallocate for each file loading
-						if (firstmipdata == nullptr)
+						if (file_mip_end > mip_offset)
 						{
-							// If file data is not available, then open the file partially with the streaming file parameters:
-							size_t filesize = resource->container_filesize - mip_data_offset;
-							size_t fileoffset = resource->container_fileoffset + mip_data_offset;
-							if (!wi::helper::FileRead(
-								resource->container_filename,
-								streaming_file,
-								filesize,
-								fileoffset
-							))
+							// memory offset of the first mip level in current streaming range:
+							mip_data_offset = resource->streaming_texture.streaming_data[mip_offset].data_offset;
+							firstmipdata = resource->filedata.data();
+
+							static wi::vector<uint8_t> streaming_file; // make this static to not reallocate for each file loading
+							if (firstmipdata == nullptr)
 							{
-								continue;
+								// If file data is not available, then open the file partially with the streaming file parameters:
+								size_t filesize = resource->streaming_texture.streaming_data[file_mip_end].data_offset - mip_data_offset;
+								size_t fileoffset = resource->container_fileoffset + mip_data_offset;
+								if (!wi::helper::FileRead(
+									resource->container_filename,
+									streaming_file,
+									filesize,
+									fileoffset
+								))
+								{
+									continue;
+								}
+								firstmipdata = streaming_file.data();
 							}
-							firstmipdata = streaming_file.data();
-						}
-						else
-						{
-							// If file data is available, we can use that for streaming:
-							firstmipdata += mip_data_offset;
+							else
+							{
+								// If file data is available, we can use that for streaming:
+								firstmipdata += mip_data_offset;
+							}
 						}
 
 						// Convert relative to absolute GPU initialization data
 						SubresourceData initdata[16] = {};
+						TextureCopyCommand copies[16] = {};
+						uint32_t copy_count = 0;
 						for (uint32_t mip = 0; mip < desc.mip_levels; ++mip)
 						{
-							auto& streaming_data = resource->streaming_texture.streaming_data[mip_offset + mip];
-							initdata[mip].data_ptr = firstmipdata + streaming_data.data_offset - mip_data_offset;
+							const int absolute_mip = mip_offset + int(mip);
+							auto& streaming_data = resource->streaming_texture.streaming_data[absolute_mip];
 							initdata[mip].row_pitch = streaming_data.row_pitch;
 							initdata[mip].slice_pitch = streaming_data.slice_pitch;
+							if (absolute_mip < file_mip_end)
+							{
+								initdata[mip].data_ptr = firstmipdata + streaming_data.data_offset - mip_data_offset;
+							}
+							else
+							{
+								TextureCopyCommand& copy = copies[copy_count++];
+								copy.src = &prev_texture;
+								copy.src_mip = uint32_t(absolute_mip - prev_mip_offset);
+								copy.dst_mip = mip;
+							}
 						}
 
 						// The replacement struct will store the newly created texture until replacement can be made later:
@@ -1422,7 +1444,18 @@ namespace wi
 						replace.srgb_subresource = -1;
 						bool success = device->CreateTexture(&desc, initdata, &replace.texture);
 						assert(success);
+						if (!success)
+							continue;
 						device->SetName(&replace.texture, resource->filename.c_str());
+
+						if (copy_count > 0)
+						{
+							for (uint32_t i = 0; i < copy_count; ++i)
+							{
+								copies[i].dst = &replace.texture;
+							}
+							device->CopyTextureAsync(copies, copy_count, "Texture Streaming Copy");
+						}
 
 						Format srgb_format = GetFormatSRGB(desc.format);
 						if (srgb_format != Format::UNKNOWN && srgb_format != desc.format)

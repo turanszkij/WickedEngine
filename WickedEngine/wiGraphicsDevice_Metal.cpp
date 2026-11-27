@@ -2184,7 +2184,21 @@ using namespace metal_internal;
 					region.size.width = width;
 					region.size.height = height;
 					region.size.depth = depth;
-					if (internal_state->buffer.get() != nullptr)
+					if (subresourceData.data_ptr == nullptr)
+					{
+						// skip initialization of this subresource
+						if (descriptor->storageMode() == MTL::StorageModePrivate)
+						{
+							width = std::max(1u, width / 2);
+							height = std::max(1u, height / 2);
+						}
+						else if (internal_state->buffer.get() == nullptr)
+						{
+							width = std::max(block_size, width / 2);
+							height = std::max(block_size, height / 2);
+						}
+					}
+					else if (internal_state->buffer.get() != nullptr)
 					{
 						// readback or upload, linear memory:
 						std::memcpy(upload_data + src_offset, subresourceData.data_ptr, datasize);
@@ -3793,7 +3807,25 @@ using namespace metal_internal;
 			auto src_internal = to_internal(command.src);
 			cmd.encoder->copyFromBuffer(src_internal->buffer.get(), command.src_offset, dst_internal->buffer.get(), command.dst_offset, command.size);
 		}
-		
+
+		copyAllocator.submit(cmd, false);
+	}
+	void GraphicsDevice_Metal::CopyTextureAsync(const TextureCopyCommand* commands, uint32_t command_count, const char* name) const
+	{
+		if (command_count == 0)
+			return;
+		NS::SharedPtr<NS::AutoreleasePool> autorelease_pool = NS::TransferPtr(NS::AutoreleasePool::alloc()->init()); // scoped drain!
+
+		CopyAllocator::CopyCMD cmd = copyAllocator.allocate(0);
+
+		for (uint32_t i = 0; i < command_count; ++i)
+		{
+			const TextureCopyCommand& command = commands[i];
+			auto dst_internal = to_internal(command.dst);
+			auto src_internal = to_internal(command.src);
+			cmd.encoder->copyFromTexture(src_internal->texture.get(), command.src_slice, command.src_mip, dst_internal->texture.get(), command.dst_slice, command.dst_mip, 1, 1);
+		}
+
 		copyAllocator.submit(cmd, false);
 	}
 

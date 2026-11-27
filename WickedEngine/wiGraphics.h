@@ -450,7 +450,7 @@ namespace wi::graphics
 		VIDEO_DECODE_H265 = 1 << 21,
 		R9G9B9E5_SHAREDEXP_RENDERABLE = 1 << 22, // indicates supporting R9G9B9E5_SHAREDEXP format for rendering to
 		COPY_BETWEEN_DIFFERENT_IMAGE_ASPECTS_NOT_SUPPORTED = 1 << 23, // indicates that CopyTexture src and dst ImageAspect must match
-		
+
 		// Compat:
 		GENERIC_SPARSE_TILE_POOL = ALIASING_GENERIC,
 	};
@@ -1405,6 +1405,16 @@ namespace wi::graphics
 		const GPUBuffer* src = nullptr;		// source buffer object for copy operation
 		uint64_t src_offset = 0;			// offset into source buffer in bytes
 		uint64_t size = 0;					// size of copy operation in bytes
+	};
+
+	struct TextureCopyCommand
+	{
+		const Texture* dst = nullptr;		// destination texture object for copy operation
+		uint32_t dst_mip = 0;				// destination mip level
+		uint32_t dst_slice = 0;				// destination array slice
+		const Texture* src = nullptr;		// source texture object for copy operation
+		uint32_t src_mip = 0;				// source mip level
+		uint32_t src_slice = 0;				// source array slice
 	};
 
 
