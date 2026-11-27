@@ -4302,6 +4302,7 @@ using namespace vulkan_internal;
 			}
 
 			wi::vector<VkBufferImageCopy> copyRegions;
+			bool partial_init = false;
 
 			const uint32_t data_stride = GetFormatStride(desc->format);
 			const uint32_t block_size = GetFormatBlockSize(desc->format);
@@ -4322,7 +4323,9 @@ using namespace vulkan_internal;
 					const uint32_t dst_slicepitch = dst_rowpitch * num_blocks_y;
 					const uint32_t src_rowpitch = subresourceData.row_pitch;
 					const uint32_t src_slicepitch = subresourceData.slice_pitch;
-					for (uint32_t z = 0; z < depth; ++z)
+					const bool skip = subresourceData.data_ptr == nullptr; // skip initialization of this subresource
+					partial_init |= skip;
+					for (uint32_t z = 0; z < depth && !skip; ++z)
 					{
 						uint8_t* dst_slice = (uint8_t*)mapped_data + copyOffset + dst_slicepitch * z;
 						uint8_t* src_slice = (uint8_t*)subresourceData.data_ptr + src_slicepitch * z;
@@ -4336,7 +4339,7 @@ using namespace vulkan_internal;
 						}
 					}
 
-					if (cmd.IsValid())
+					if (cmd.IsValid() && !skip)
 					{
 						VkBufferImageCopy copyRegion = {};
 						copyRegion.bufferOffset = copyOffset;
@@ -4393,25 +4396,39 @@ using namespace vulkan_internal;
 
 				vkCmdPipelineBarrier2(cmd.transferCommandBuffer, &dependencyInfo);
 
-				vkCmdCopyBufferToImage(
-					cmd.transferCommandBuffer,
-					to_internal(&cmd.uploadbuffer)->resource,
-					internal_state->resource,
-					VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL,
-					(uint32_t)copyRegions.size(),
-					copyRegions.data()
-				);
+				if (!copyRegions.empty())
+				{
+					vkCmdCopyBufferToImage(
+						cmd.transferCommandBuffer,
+						to_internal(&cmd.uploadbuffer)->resource,
+						internal_state->resource,
+						VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL,
+						(uint32_t)copyRegions.size(),
+						copyRegions.data()
+					);
+				}
 
-				copyAllocator.submit(cmd);
-
-				// Note: the copy allocator is done at this point on CPU and GPU, so transition will be safe:
 				std::swap(barrier.srcStageMask, barrier.dstStageMask);
 				barrier.oldLayout = VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL;
 				barrier.newLayout = _ConvertImageLayout(texture->desc.layout);
 				barrier.srcAccessMask = VK_ACCESS_2_TRANSFER_WRITE_BIT;
 				barrier.dstAccessMask = _ParseResourceState(texture->desc.layout);
-				std::scoped_lock lck(transitionLocker);
-				init_transitions.push_back(barrier);
+
+				if (partial_init)
+				{
+					barrier.dstStageMask = VK_PIPELINE_STAGE_2_ALL_COMMANDS_BIT;
+					barrier.dstAccessMask = 0;
+					vkCmdPipelineBarrier2(cmd.transferCommandBuffer, &dependencyInfo);
+					copyAllocator.submit(cmd);
+				}
+				else
+				{
+					copyAllocator.submit(cmd);
+
+					// Note: the copy allocator is done at this point on CPU and GPU, so transition will be safe:
+					std::scoped_lock lck(transitionLocker);
+					init_transitions.push_back(barrier);
+				}
 			}
 		}
 		else if(texture->desc.layout != ResourceState::UNDEFINED && internal_state->resource != VK_NULL_HANDLE)
@@ -7272,6 +7289,139 @@ using namespace vulkan_internal;
 				1,
 				&copyRegion
 			);
+		}
+
+		if (name != nullptr && debugUtils)
+		{
+			vkCmdEndDebugUtilsLabelEXT(cmd.transferCommandBuffer);
+		}
+
+		copyAllocator.submit(cmd, false);
+	}
+	void GraphicsDevice_Vulkan::CopyTextureAsync(const TextureCopyCommand* commands, uint32_t command_count, const char* name) const
+	{
+		if (command_count == 0)
+			return;
+		CopyAllocator::CopyCMD cmd = copyAllocator.allocate(0);
+
+		if (name != nullptr && debugUtils)
+		{
+			VkDebugUtilsLabelEXT label = { VK_STRUCTURE_TYPE_DEBUG_UTILS_LABEL_EXT };
+			label.pLabelName = name;
+			label.color[0] = 0.0f;
+			label.color[1] = 0.0f;
+			label.color[2] = 0.0f;
+			label.color[3] = 1.0f;
+			vkCmdBeginDebugUtilsLabelEXT(cmd.transferCommandBuffer, &label);
+		}
+
+		auto get_aspect = [](Format format) {
+			VkImageAspectFlags aspect = VK_IMAGE_ASPECT_COLOR_BIT;
+			if (IsFormatDepthSupport(format))
+			{
+				aspect = VK_IMAGE_ASPECT_DEPTH_BIT;
+				if (IsFormatStencilSupport(format))
+				{
+					aspect |= VK_IMAGE_ASPECT_STENCIL_BIT;
+				}
+			}
+			return aspect;
+		};
+
+		static constexpr uint32_t batch_size = 16;
+		VkImageMemoryBarrier2 barriers_before[batch_size * 2];
+		VkImageMemoryBarrier2 barriers_after[batch_size * 2];
+		VkDependencyInfo dependencyInfo = {};
+		dependencyInfo.sType = VK_STRUCTURE_TYPE_DEPENDENCY_INFO;
+
+		for (uint32_t batch_start = 0; batch_start < command_count; batch_start += batch_size)
+		{
+			const uint32_t batch_end = std::min(command_count, batch_start + batch_size);
+			uint32_t barrier_count = 0;
+			for (uint32_t i = batch_start; i < batch_end; ++i)
+			{
+				const TextureCopyCommand& command = commands[i];
+
+				VkImageMemoryBarrier2 barrier = {};
+				barrier.sType = VK_STRUCTURE_TYPE_IMAGE_MEMORY_BARRIER_2;
+				barrier.srcQueueFamilyIndex = VK_QUEUE_FAMILY_IGNORED;
+				barrier.dstQueueFamilyIndex = VK_QUEUE_FAMILY_IGNORED;
+				barrier.subresourceRange.levelCount = 1;
+				barrier.subresourceRange.layerCount = 1;
+
+				// src:
+				barrier.image = to_internal(command.src)->resource;
+				barrier.subresourceRange.aspectMask = get_aspect(command.src->desc.format);
+				barrier.subresourceRange.baseMipLevel = command.src_mip;
+				barrier.subresourceRange.baseArrayLayer = command.src_slice;
+				barrier.oldLayout = _ConvertImageLayout(command.src->desc.layout);
+				barrier.newLayout = VK_IMAGE_LAYOUT_TRANSFER_SRC_OPTIMAL;
+				barrier.srcStageMask = VK_PIPELINE_STAGE_2_ALL_COMMANDS_BIT;
+				barrier.srcAccessMask = 0;
+				barrier.dstStageMask = VK_PIPELINE_STAGE_2_TRANSFER_BIT;
+				barrier.dstAccessMask = VK_ACCESS_2_TRANSFER_READ_BIT;
+				barriers_before[barrier_count] = barrier;
+				std::swap(barrier.oldLayout, barrier.newLayout);
+				std::swap(barrier.srcStageMask, barrier.dstStageMask);
+				barrier.srcAccessMask = 0;
+				barrier.dstAccessMask = 0;
+				barriers_after[barrier_count] = barrier;
+				barrier_count++;
+
+				// dst:
+				barrier.image = to_internal(command.dst)->resource;
+				barrier.subresourceRange.aspectMask = get_aspect(command.dst->desc.format);
+				barrier.subresourceRange.baseMipLevel = command.dst_mip;
+				barrier.subresourceRange.baseArrayLayer = command.dst_slice;
+				barrier.oldLayout = _ConvertImageLayout(command.dst->desc.layout);
+				barrier.newLayout = VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL;
+				barrier.srcStageMask = VK_PIPELINE_STAGE_2_ALL_COMMANDS_BIT;
+				barrier.srcAccessMask = 0;
+				barrier.dstStageMask = VK_PIPELINE_STAGE_2_TRANSFER_BIT;
+				barrier.dstAccessMask = VK_ACCESS_2_TRANSFER_WRITE_BIT;
+				barriers_before[barrier_count] = barrier;
+				std::swap(barrier.oldLayout, barrier.newLayout);
+				std::swap(barrier.srcStageMask, barrier.dstStageMask);
+				barrier.srcAccessMask = VK_ACCESS_2_TRANSFER_WRITE_BIT;
+				barrier.dstAccessMask = 0;
+				barriers_after[barrier_count] = barrier;
+				barrier_count++;
+			}
+
+			dependencyInfo.imageMemoryBarrierCount = barrier_count;
+			dependencyInfo.pImageMemoryBarriers = barriers_before;
+			vkCmdPipelineBarrier2(cmd.transferCommandBuffer, &dependencyInfo);
+
+			for (uint32_t i = batch_start; i < batch_end; ++i)
+			{
+				const TextureCopyCommand& command = commands[i];
+				const TextureDesc& src_desc = command.src->desc;
+				VkImageCopy copy = {};
+				copy.srcSubresource.aspectMask = get_aspect(src_desc.format);
+				copy.srcSubresource.mipLevel = command.src_mip;
+				copy.srcSubresource.baseArrayLayer = command.src_slice;
+				copy.srcSubresource.layerCount = 1;
+				copy.dstSubresource.aspectMask = get_aspect(command.dst->desc.format);
+				copy.dstSubresource.mipLevel = command.dst_mip;
+				copy.dstSubresource.baseArrayLayer = command.dst_slice;
+				copy.dstSubresource.layerCount = 1;
+				copy.extent.width = std::max(1u, src_desc.width >> command.src_mip);
+				copy.extent.height = std::max(1u, src_desc.height >> command.src_mip);
+				copy.extent.depth = std::max(1u, src_desc.depth >> command.src_mip);
+				vkCmdCopyImage(
+					cmd.transferCommandBuffer,
+					to_internal(command.src)->resource,
+					VK_IMAGE_LAYOUT_TRANSFER_SRC_OPTIMAL,
+					to_internal(command.dst)->resource,
+					VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL,
+					1,
+					&copy
+				);
+			}
+
+			dependencyInfo.imageMemoryBarrierCount = barrier_count;
+			dependencyInfo.pImageMemoryBarriers = barriers_after;
+			vkCmdPipelineBarrier2(cmd.transferCommandBuffer, &dependencyInfo);
 		}
 
 		if (name != nullptr && debugUtils)
