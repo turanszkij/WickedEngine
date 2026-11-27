@@ -1587,6 +1587,15 @@ using namespace vulkan_internal;
 				}
 			}
 
+			// Waits for async copies that were submitted from any thread:
+			async_wait_locker.lock();
+			for (auto& x : async_waitSemaphoreInfos)
+			{
+				submit_waitSemaphoreInfos.push_back(x);
+			}
+			async_waitSemaphoreInfos.clear();
+			async_wait_locker.unlock();
+
 			VkSubmitInfo2 submitInfo = {};
 			submitInfo.sType = VK_STRUCTURE_TYPE_SUBMIT_INFO_2;
 			submitInfo.commandBufferInfoCount = (uint32_t)submit_cmds.size();
@@ -1792,11 +1801,11 @@ using namespace vulkan_internal;
 				CommandQueue& queue = device->queues[q];
 				if (queue.queue == nullptr)
 					continue;
-				std::scoped_lock lock(*queue.locker);
-				queue.submit_waitSemaphoreInfos.push_back(signals.back());
+				queue.async_wait_locker.lock();
+				queue.async_waitSemaphoreInfos.push_back(signals.back());
+				queue.async_wait_locker.unlock();
+				cmd.semaphores.push_back(signals.back().semaphore);
 				signals.pop_back();
-
-				cmd.semaphores.push_back(queue.submit_waitSemaphoreInfos.back().semaphore);
 			}
 
 			std::scoped_lock lock(locker);

@@ -245,6 +245,9 @@ namespace wi::graphics
 			bool sparse_binding_supported = false;
 			wi::allocator::shared_ptr<std::mutex> locker;
 
+			wi::vector<VkSemaphoreSubmitInfo> async_waitSemaphoreInfos;
+			wi::SpinLock async_wait_locker;
+
 			void clear();
 			void signal(VkSemaphore semaphore);
 			void wait(VkSemaphore semaphore);
