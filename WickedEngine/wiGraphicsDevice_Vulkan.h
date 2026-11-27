@@ -275,6 +275,7 @@ namespace wi::graphics
 			wi::vector<CopyCMD> freelist;
 			std::deque<CopyCMD> async_worklist;
 			wi::vector<VkSemaphore> async_semaphore_recycle[BUFFERCOUNT];
+			wi::vector<VkSemaphore> semaphore_pool;
 
 			void init(GraphicsDevice_Vulkan* device);
 			void destroy();

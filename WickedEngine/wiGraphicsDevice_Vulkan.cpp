@@ -1682,6 +1682,10 @@ using namespace vulkan_internal;
 				vkDestroySemaphore(device->device, sema, nullptr);
 			}
 		}
+		for (auto& sema : semaphore_pool)
+		{
+			vkDestroySemaphore(device->device, sema, nullptr);
+		}
 	}
 	GraphicsDevice_Vulkan::CopyAllocator::CopyCMD GraphicsDevice_Vulkan::CopyAllocator::allocate(uint64_t staging_size)
 	{
@@ -1764,6 +1768,7 @@ using namespace vulkan_internal;
 
 			if (!wait_cpu)
 			{
+				std::scoped_lock lock(locker);
 				for (int q = 0; q < QUEUE_COUNT; ++q)
 				{
 					CommandQueue& queue = device->queues[q];
@@ -1772,7 +1777,18 @@ using namespace vulkan_internal;
 
 					auto& signal = signals.emplace_back();
 					signal.sType = VK_STRUCTURE_TYPE_SEMAPHORE_SUBMIT_INFO;
-					signal.semaphore = device->new_semaphore();
+					if (semaphore_pool.empty())
+					{
+						VkSemaphoreCreateInfo info = {};
+						info.sType = VK_STRUCTURE_TYPE_SEMAPHORE_CREATE_INFO;
+						vulkan_check(vkCreateSemaphore(device->device, &info, nullptr, &signal.semaphore));
+						device->set_semaphore_name(signal.semaphore, "AsyncCopySemaphore");
+					}
+					else
+					{
+						signal.semaphore = semaphore_pool.back();
+						semaphore_pool.pop_back();
+					}
 					signal.stageMask = VK_PIPELINE_STAGE_2_ALL_COMMANDS_BIT;
 				}
 				submitInfo.pSignalSemaphoreInfos = signals.data();
@@ -6972,7 +6988,7 @@ using namespace vulkan_internal;
 			std::scoped_lock lck(copyAllocator.locker);
 			for (auto& sema : copyAllocator.async_semaphore_recycle[GetBufferIndex()]) // first free this buffer's recycleable semaphores, only after add to it!
 			{
-				free_semaphore(sema);
+				copyAllocator.semaphore_pool.push_back(sema);
 			}
 			copyAllocator.async_semaphore_recycle[GetBufferIndex()].clear();
 			while (!copyAllocator.async_worklist.empty() && vkGetFenceStatus(device, copyAllocator.async_worklist.front().fence) == VK_SUCCESS)
