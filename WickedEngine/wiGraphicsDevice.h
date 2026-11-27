@@ -91,8 +91,6 @@ namespace wi::graphics
 		virtual bool CreateSwapChain(const SwapChainDesc* desc, wi::platform::window_type window, SwapChain* swapchain) const = 0;
 		// Create a buffer with a callback to initialize its data. Note: don't read from callback's dest pointer, reads will be very slow! Use memcpy to write to it to make sure only writes happen!
 		virtual bool CreateBuffer2(const GPUBufferDesc* desc, const std::function<void(void* dest)>& init_callback, GPUBuffer* buffer, const GPUResource* alias = nullptr, uint64_t alias_offset = 0ull) const = 0;
-		// Create a texture, optionally with initial data per subresource (in mip-major order per array slice)
-		//	A subresource's data_ptr can be nullptr to skip its initialization (for example to fill it later with CopyTextureAsync)
 		virtual bool CreateTexture(const TextureDesc* desc, const SubresourceData* initial_data, Texture* texture, const GPUResource* alias = nullptr, uint64_t alias_offset = 0ull) const = 0;
 		virtual bool CreateShader(ShaderStage stage, const void* shadercode, size_t shadercode_size, Shader* shader, const char* entrypoint = "main") const = 0;
 		virtual bool CreateSampler(const SamplerDesc* desc, Sampler* sampler) const = 0;
@@ -201,12 +199,7 @@ namespace wi::graphics
 		//	Name can be provided for debugging purposes optionally
 		virtual void CopyBufferAsync(const GPUBufferCopyCommand* commands, uint32_t command_count, const char* name = nullptr) const {}
 
-		// Copies whole texture subresources (the src and dst subresources must have the same dimensions and compatible formats), submitted immediately to a GPU COPY QUEUE
-		//	independently from the SubmitCommandLists, so this can straddle frame boundaries. All other queues will be synced to the completion of this.
-		//	Requirements:
-		//	- src and dst must be non-sparse DEFAULT usage textures without RENDER_TARGET, DEPTH_STENCIL and UNORDERED_ACCESS bind flags, and they must be in their desc.layout
-		//	- dst must be created with initial_data (subresources that will be filled by this can have nullptr as data_ptr) and it must not be used by any queue before this completes
-		//	- src can be read by other queues while this is executing, but not written
+		// Copies texture data, submitted immediately to a GPU COPY QUEUE independently from the SubmitCommandLists, so this can straddle frame boundaries. All other queues will be synced to the completion of this.
 		//	Name can be provided for debugging purposes optionally
 		virtual void CopyTextureAsync(const TextureCopyCommand* commands, uint32_t command_count, const char* name = nullptr) const {}
 
