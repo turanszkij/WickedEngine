@@ -27,14 +27,8 @@
 const uint32_t min_virtual_resolution = SVT_TILE_SIZE;
 const uint32_t max_virtual_resolution = 65536u;
 
-#ifdef NOSPARSE
-// Try to account for memory increase in no-sparse mode, reduce atlas size:
-const uint32_t atlas_physical_width = 16384u;
+const uint32_t atlas_physical_width = 8192u;
 const uint32_t atlas_physical_height = 8192u;
-#else
-const uint32_t atlas_physical_width = 16384u;
-const uint32_t atlas_physical_height = 16384u;
-#endif // NOSPARSE
 
 using namespace wi::ecs;
 using namespace wi::scene;
@@ -514,9 +508,10 @@ namespace wi::terrain
 		cpu_resource_id = 0;
 	}
 
-	void VirtualTexture::init(VirtualTextureAtlas& atlas, uint resolution)
+	void VirtualTexture::init(VirtualTextureAtlas& atlas, uint resolution, uint8_t fallback_sub_shift)
 	{
 		this->resolution = resolution;
+		this->fallback_sub_shift = fallback_sub_shift;
 
 		lod_count = 0;
 		uint32_t tile_count = 0;
@@ -560,15 +555,17 @@ namespace wi::terrain
 		}
 		else
 		{
-			// far away chunks only have 1 tile
+			// far away chunks only have 1 tile, which can be a subdivision of a physical tile
 			tiles.resize(tile_count);
-			if (atlas.allocate_tile(tiles.back()))
+			if (atlas.allocate_sub_tile(tiles.back(), fallback_sub_shift))
 			{
 				// update the only tile there is:
 				UpdateRequest& request = update_requests.emplace_back();
 				request.lod = lod_count - 1;
 				request.tile_x = tiles.back().x;
 				request.tile_y = tiles.back().y;
+				request.sub_shift = tiles.back().sub_shift;
+				request.sub_index = tiles.back().sub_index;
 				request.x = 0;
 				request.y = 0;
 			}
@@ -2827,9 +2824,13 @@ namespace wi::terrain
 			const uint32_t required_resolution = dist < 2 ? max_virtual_resolution : min_virtual_resolution;
 			//const uint32_t required_resolution = std::max(min_resolution, max_resolution >> std::min(7, std::max(0, dist - 1)));
 
-			if (vt.resolution != required_resolution)
+			// Far away chunks share physical tiles with smaller fallback textures:
+			//	0: 256x256 (whole physical tile), 1: 124x124 (4 per physical tile), 2: 56x56 (16 per physical tile)
+			const uint8_t required_fallback_sub_shift = dist < 4 ? 0 : (dist < 8 ? 1 : 2);
+
+			if (vt.resolution != required_resolution || vt.fallback_sub_shift != required_fallback_sub_shift)
 			{
-				vt.init(atlas, required_resolution);
+				vt.init(atlas, required_resolution, required_fallback_sub_shift);
 
 				for (uint32_t map_type = 0; map_type < arraysize(atlas.maps); ++map_type)
 				{
@@ -2852,18 +2853,10 @@ namespace wi::terrain
 					}
 					else
 					{
-						// Simple chunks without residency only have 1 mapped tile, and no mips so they simply use a texMulAdd (todo)
-						auto tile = vt.tiles.back();
-						const float2 resolution_rcp = float2(
-							1.0f / (float)atlas.maps[map_type].texture.desc.width,
-							1.0f / (float)atlas.maps[map_type].texture.desc.height
-						);
+						// Simple chunks without residency only have 1 mapped tile, and no mips so they simply use a texMulAdd
 						if (map_type == 0)
 						{
-							material->texMulAdd.x = (float)SVT_TILE_SIZE * resolution_rcp.x;
-							material->texMulAdd.y = (float)SVT_TILE_SIZE * resolution_rcp.y;
-							material->texMulAdd.z = ((float)tile.x * (float)SVT_TILE_SIZE_PADDED + SVT_TILE_BORDER) * resolution_rcp.x;
-							material->texMulAdd.w = ((float)tile.y * (float)SVT_TILE_SIZE_PADDED + SVT_TILE_BORDER) * resolution_rcp.y;
+							material->texMulAdd = atlas.get_tile_texmuladd(vt.tiles.back());
 						}
 						material->textures[map_type].sparse_residencymap_descriptor = -1;
 						material->textures[map_type].sparse_feedbackmap_descriptor = -1;
@@ -2887,6 +2880,16 @@ namespace wi::terrain
 			for (auto& x : atlas.physical_tiles)
 			{
 				x.free_frames++;
+			}
+			for (uint8_t sub_shift = 1; sub_shift < arraysize(atlas.sub_blocks); ++sub_shift)
+			{
+				for (uint32_t index : atlas.sub_blocks[sub_shift])
+				{
+					for (auto& x : atlas.physical_tiles[index].sub_free_frames)
+					{
+						x++;
+					}
+				}
 			}
 
 			// Process GPU allocation requests from last frame:
@@ -3136,7 +3139,25 @@ namespace wi::terrain
 						int(request.y * SVT_TILE_SIZE) - int(SVT_TILE_BORDER)
 					);
 
-					if (request_lod_resolution < SVT_TILE_SIZE)
+					if (request.sub_shift > 0)
+					{
+						// subdivided physical tile, single tile without mips:
+						const VirtualTextureAtlas::Tile tile = { request.tile_x, request.tile_y, (uint8_t)request.sub_shift, (uint8_t)request.sub_index };
+						const XMUINT2 sub_offset = VirtualTextureAtlas::sub_tile_offset(tile);
+						push.offset = int2(-int(SVT_TILE_BORDER), -int(SVT_TILE_BORDER));
+						push.resolution_rcp = 1.0f / VirtualTextureAtlas::sub_tile_resolution(tile.sub_shift);
+						push.write_offset = uint2(sub_offset.x / 4u, sub_offset.y / 4u);
+						push.write_size = VirtualTextureAtlas::sub_tile_pitch(tile.sub_shift) / 4u;
+						device->PushConstants(&push, sizeof(push), cmd);
+
+						device->Dispatch(
+							(push.write_size + 7u) / 8u,
+							(push.write_size + 7u) / 8u,
+							1,
+							cmd
+						);
+					}
+					else if (request_lod_resolution < SVT_TILE_SIZE)
 					{
 						// packed mips
 						uint32_t tail_mip_idx = 0;

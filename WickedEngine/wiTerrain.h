@@ -9,6 +9,7 @@
 #include "wiVector.h"
 
 #include <memory>
+#include <algorithm>
 
 namespace wi::terrain
 {
@@ -77,6 +78,8 @@ namespace wi::terrain
 		{
 			uint8_t x = 0xFF;
 			uint8_t y = 0xFF;
+			uint8_t sub_shift = 0; // 0: whole physical tile, otherwise the physical tile is subdivided into (1 << sub_shift)^2 smaller tiles (used for far away chunk fallbacks)
+			uint8_t sub_index = 0; // index of the subdivision slot within the physical tile
 			constexpr bool IsValid() const
 			{
 				return x != 0xFF && y != 0xFF;
@@ -85,12 +88,61 @@ namespace wi::terrain
 		};
 		wi::vector<Tile> free_tiles;
 
+		static constexpr uint8_t SUB_SHIFT_MAX = 2;
+		static constexpr uint32_t SUB_SLOT_MAX = 1u << (SUB_SHIFT_MAX * 2);
+
 		struct PhysicalTile
 		{
 			const Tile* last_used = nullptr;
 			uint64_t free_frames = 0;
+
+			// Subdivision state, only valid while last_used == &sub_block:
+			Tile sub_block; // owner of the whole physical tile when it is subdivided
+			const Tile* sub_owners[SUB_SLOT_MAX] = {};
+			uint32_t sub_free_frames[SUB_SLOT_MAX] = {};
+
+			constexpr bool IsSubdivided(uint8_t shift) const
+			{
+				return last_used == &sub_block && sub_block.sub_shift == shift;
+			}
 		};
 		wi::vector<PhysicalTile> physical_tiles;
+		wi::vector<uint32_t> sub_blocks[SUB_SHIFT_MAX + 1]; // physical tile indices that are subdivided, per sub_shift
+
+		// Size of one subdivision slot in texels including border, it is kept multiple of 4 for block compression:
+		static constexpr uint32_t sub_tile_pitch(uint8_t shift)
+		{
+			return ((SVT_TILE_SIZE_PADDED / 4u) >> shift) * 4u;
+		}
+		// Usable resolution of a tile without the border:
+		static constexpr uint32_t sub_tile_resolution(uint8_t shift)
+		{
+			return sub_tile_pitch(shift) - SVT_TILE_BORDER * 2;
+		}
+		// Upper left texel of a tile inside the atlas, including the border:
+		static inline XMUINT2 sub_tile_offset(const Tile& tile)
+		{
+			const uint32_t pitch = sub_tile_pitch(tile.sub_shift);
+			const uint32_t slots = 1u << tile.sub_shift;
+			return XMUINT2(
+				tile.x * SVT_TILE_SIZE_PADDED + (tile.sub_index % slots) * pitch,
+				tile.y * SVT_TILE_SIZE_PADDED + (tile.sub_index / slots) * pitch
+			);
+		}
+		// Texture coordinate transform to map a tile without mips into the atlas (for chunks without residency):
+		XMFLOAT4 get_tile_texmuladd(const Tile& tile) const
+		{
+			const float width_rcp = 1.0f / float(maps[0].texture.desc.width);
+			const float height_rcp = 1.0f / float(maps[0].texture.desc.height);
+			const float resolution = float(sub_tile_resolution(tile.sub_shift));
+			const XMUINT2 offset = sub_tile_offset(tile);
+			return XMFLOAT4(
+				resolution * width_rcp,
+				resolution * height_rcp,
+				float(offset.x + SVT_TILE_BORDER) * width_rcp,
+				float(offset.y + SVT_TILE_BORDER) * height_rcp
+			);
+		}
 
 		struct Residency
 		{
@@ -121,11 +173,75 @@ namespace wi::terrain
 			physical_tile.free_frames = 0;
 			return true;
 		}
+		// Allocates a whole physical tile (sub_shift = 0) or a subdivision slot of a shared physical tile (sub_shift > 0)
+		bool allocate_sub_tile(Tile& tile, uint8_t sub_shift)
+		{
+			if (sub_shift == 0)
+				return allocate_tile(tile);
+			sub_shift = std::min(sub_shift, SUB_SHIFT_MAX);
+			const uint32_t slot_count = 1u << (sub_shift * 2);
+			auto claim = [&](PhysicalTile& physical_tile, uint32_t slot) {
+				physical_tile.sub_owners[slot] = &tile;
+				physical_tile.sub_free_frames[slot] = 0;
+				tile = physical_tile.sub_block;
+				tile.sub_index = uint8_t(slot);
+			};
+			wi::vector<uint32_t>& blocks = sub_blocks[sub_shift];
+			for (size_t i = 0; i < blocks.size();)
+			{
+				PhysicalTile& physical_tile = physical_tiles[blocks[i]];
+				if (!physical_tile.IsSubdivided(sub_shift))
+				{
+					// physical tile was reclaimed for other use:
+					blocks[i] = blocks.back();
+					blocks.pop_back();
+					continue;
+				}
+				// Only blocks kept resident in last frame can be used, otherwise they can be in free_tiles list:
+				if (physical_tile.free_frames == 0)
+				{
+					for (uint32_t slot = 0; slot < slot_count; ++slot)
+					{
+						if (physical_tile.sub_owners[slot] == nullptr || physical_tile.sub_free_frames[slot] > 0)
+						{
+							claim(physical_tile, slot);
+							return true;
+						}
+					}
+				}
+				i++;
+			}
+			// No free slot found, subdivide a new physical tile:
+			Tile block;
+			if (!allocate_tile(block))
+				return false;
+			const uint32_t index = block.x + block.y * physical_tile_count_x;
+			PhysicalTile& physical_tile = physical_tiles[index];
+			physical_tile.sub_block = block;
+			physical_tile.sub_block.sub_shift = sub_shift;
+			physical_tile.last_used = &physical_tile.sub_block;
+			for (uint32_t slot = 0; slot < SUB_SLOT_MAX; ++slot)
+			{
+				physical_tile.sub_owners[slot] = nullptr;
+				physical_tile.sub_free_frames[slot] = 0;
+			}
+			if (std::find(blocks.begin(), blocks.end(), index) == blocks.end())
+			{
+				blocks.push_back(index);
+			}
+			claim(physical_tile, 0);
+			return true;
+		}
 		bool request_residency(const Tile& tile)
 		{
 			if (check_tile_resident(tile))
 			{
-				physical_tiles[tile.x + tile.y * physical_tile_count_x].free_frames = 0;
+				PhysicalTile& physical_tile = physical_tiles[tile.x + tile.y * physical_tile_count_x];
+				physical_tile.free_frames = 0;
+				if (tile.sub_shift > 0)
+				{
+					physical_tile.sub_free_frames[tile.sub_index] = 0;
+				}
 				return true;
 			}
 			return false;
@@ -134,7 +250,12 @@ namespace wi::terrain
 		{
 			if (!tile.IsValid())
 				return false;
-			return physical_tiles[tile.x + tile.y * physical_tile_count_x].last_used == &tile;
+			const PhysicalTile& physical_tile = physical_tiles[tile.x + tile.y * physical_tile_count_x];
+			if (tile.sub_shift > 0)
+			{
+				return physical_tile.IsSubdivided(tile.sub_shift) && physical_tile.sub_owners[tile.sub_index] == &tile;
+			}
+			return physical_tile.last_used == &tile;
 		}
 		uint64_t get_tile_frames(const Tile& tile) const
 		{
@@ -174,8 +295,9 @@ namespace wi::terrain
 		wi::vector<VirtualTextureAtlas::Tile> tiles;
 		uint32_t lod_count = 0;
 		uint32_t resolution = 0;
+		uint8_t fallback_sub_shift = 0; // only for chunks without residency: subdivision of the physical tile that holds the single tile
 
-		void init(VirtualTextureAtlas& atlas, uint resolution);
+		void init(VirtualTextureAtlas& atlas, uint resolution, uint8_t fallback_sub_shift = 0);
 
 		void free(VirtualTextureAtlas& atlas)
 		{
@@ -205,6 +327,8 @@ namespace wi::terrain
 			uint16_t lod = 0;
 			uint8_t tile_x = 0;
 			uint8_t tile_y = 0;
+			uint8_t sub_shift = 0;
+			uint8_t sub_index = 0;
 		};
 		mutable wi::vector<UpdateRequest> update_requests;
 		wi::graphics::Texture blendmap;
