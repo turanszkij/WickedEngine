@@ -8295,7 +8295,7 @@ using namespace vulkan_internal;
 						for (uint32_t mip = 0; mip < dst_desc.mip_levels; ++mip)
 						{
 							const uint32_t src_subresource = ComputeSubresource(mip, slice, aspect, src_desc.mip_levels, src_desc.array_size);
-							const SubresourceData& src_subresourcedata = internal_state_dst->mapped_subresources[src_subresource];
+							const SubresourceData& src_subresourcedata = internal_state_src->mapped_subresources[src_subresource];
 							const uint32_t num_blocks_x = mip_width / block_size;
 							const uint32_t num_blocks_y = mip_height / block_size;
 							copy.imageExtent.width = mip_width;
