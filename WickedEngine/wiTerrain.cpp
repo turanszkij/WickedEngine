@@ -27,7 +27,7 @@
 const uint32_t min_virtual_resolution = SVT_TILE_SIZE;
 const uint32_t max_virtual_resolution = 65536u;
 
-const uint32_t atlas_physical_width = 8192u;
+const uint32_t atlas_physical_width = 16384u;
 const uint32_t atlas_physical_height = 8192u;
 
 // Anisotropy used for virtual texture mip selection (and thus page requests):
