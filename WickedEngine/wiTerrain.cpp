@@ -30,6 +30,11 @@ const uint32_t max_virtual_resolution = 65536u;
 const uint32_t atlas_physical_width = 8192u;
 const uint32_t atlas_physical_height = 8192u;
 
+// Anisotropy used for virtual texture mip selection (and thus page requests):
+//	Higher values request more detailed pages at grazing angles (more atlas pressure), lower values make distant terrain blurrier
+//	The hardware sampler anisotropy is applied on top of this inside the selected mip
+const uint32_t virtual_anisotropy = 4u;
+
 using namespace wi::ecs;
 using namespace wi::scene;
 using namespace wi::graphics;
@@ -2838,7 +2843,7 @@ namespace wi::terrain
 					if (vt.residency != nullptr)
 					{
 						material->texMulAdd = XMFLOAT4(1, 1, 0, 0);
-						material->textures[map_type].virtual_anisotropy = sampler.desc.max_anisotropy;
+						material->textures[map_type].virtual_anisotropy = virtual_anisotropy;
 						material->textures[map_type].sparse_residencymap_descriptor = device->GetDescriptorIndex(&vt.residency->residencyMap, SubresourceType::SRV);
 						if (map_type == 0)
 						{
